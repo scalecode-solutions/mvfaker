@@ -18,6 +18,22 @@ entity "customer" {
     gen = "bool"
     p   = 0.1
   }
+  field "country" {
+    gen = "address.country"
+  }
+  field "city" {
+    gen  = "address.city"
+    from = "country" # coherent: city is within the country
+  }
+  field "phone" {
+    gen  = "phone"
+    from = "country" # coherent: dialing code matches the country
+  }
+  field "joined" {
+    gen = "date"
+    min = 2019
+    max = 2024
+  }
 }
 
 entity "order" {

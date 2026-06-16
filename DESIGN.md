@@ -134,8 +134,9 @@ dataset "demo" {
 }
 ```
 
-*(Rough edge: HCL forbids comma-separated attrs on one line — field bodies are
-multi-line.)*
+*(Rough edges: HCL forbids comma-separated attrs on one line — field bodies are
+multi-line. And `gen`/`from`/`ref`/`unique` are reserved attribute names, so a
+generator's params must avoid them — e.g. `date` uses `min`/`max`, not `from`/`to`.)*
 
 ## 8. The registry — the seam between config and code
 

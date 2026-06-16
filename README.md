@@ -60,6 +60,15 @@ fill automatically. `Struct[T]()` is an ordinary generator, so it composes with
 
 See [DESIGN.md](DESIGN.md) for the full architecture.
 
+## Generators
+
+`name.first/last/full` (Zipf-weighted), `internet.email`, `address.country/city/
+region/postal/full`, `phone`, `date`, `datetime`, `money`/`price`, `number`,
+`bool`, `uuid`, `lorem.word(s)`. Locale fields cohere via `from`: set a `country`
+field, then `from = "country"` on `city`/`postal`/`phone` and they match it.
+(Reserved attribute names: `gen`, `from`, `ref`, `unique` — generator params use
+other names, e.g. `date` takes `min`/`max` years.)
+
 ## Status
 
 `v0` — internal, API and seeded output not yet frozen. Rough edges welcome.

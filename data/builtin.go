@@ -8,15 +8,15 @@ import (
 
 func init() {
 	Register("name.first", func(p Params) (MakeFn, error) {
-		return func(any) gen.Generator[any] { return boxed(gen.PickSlice(firstNames)) }, nil
+		return func(any) gen.Generator[any] { return boxed(zipfPick(firstNames)) }, nil
 	})
 	Register("name.last", func(p Params) (MakeFn, error) {
-		return func(any) gen.Generator[any] { return boxed(gen.PickSlice(lastNames)) }, nil
+		return func(any) gen.Generator[any] { return boxed(zipfPick(lastNames)) }, nil
 	})
 	Register("name.full", func(p Params) (MakeFn, error) {
+		first, last := zipfPick(firstNames), zipfPick(lastNames)
 		g := gen.New(func(s gen.Source) string {
-			return gen.PickSlice(firstNames).Generate(s.Split()) + " " +
-				gen.PickSlice(lastNames).Generate(s.Split())
+			return first.Generate(s.Split()) + " " + last.Generate(s.Split())
 		})
 		return func(any) gen.Generator[any] { return boxed(g) }, nil
 	})
