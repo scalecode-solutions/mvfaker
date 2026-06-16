@@ -100,7 +100,9 @@ Where all stateful concerns live. Entities have ordered fields; a field is eithe
 a registered generator (optionally `from` another field) or a `ref` FK. Because
 ids are dense `0..count-1`, an FK is just a positional draw into the target's row
 space — no pool is materialized, so seeding stays parallel. Sinks: `JSONSink`
-(accumulates `{entity: [...]}`), `SQLSink` (streams `INSERT`s, suited to scale).
+(accumulates `{entity: [...]}`), `SQLSink` (streams `INSERT`s), `CopySink`
+(Postgres `COPY` text format — ~half the bytes of INSERTs and far faster to load,
+the real bulk path).
 
 **Uniqueness** (`unique = true`) is the proof the purity boundary pays off: it's
 a genuinely stateful feature implemented with *no mutable set* and *no cross-row

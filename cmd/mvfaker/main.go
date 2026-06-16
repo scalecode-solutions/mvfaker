@@ -48,10 +48,19 @@ func main() {
 		runs   = flag.Int("runs", 1000, "prop: cases to try per rule")
 		entity = flag.String("entity", "", "entity to emit (default: first in config)")
 		seedV  = flag.Uint64("s", 1, "seed value (determinism)")
-		sql    = flag.Bool("sql", false, "seed: emit SQL instead of JSON")
+		sql    = flag.Bool("sql", false, "seed: emit SQL INSERTs instead of JSON")
+		copyF  = flag.Bool("copy", false, "seed: emit Postgres COPY (fast bulk load)")
 		out    = flag.String("o", "", "output file (default stdout)")
 	)
 	flag.Parse()
+
+	format := "json"
+	if *sql {
+		format = "sql"
+	}
+	if *copyF {
+		format = "copy"
+	}
 
 	w := io.Writer(os.Stdout)
 	if *out != "" {
@@ -67,7 +76,7 @@ func main() {
 	case *prop:
 		runProp(w, flag.Args(), *seedV, *runs)
 	case *seed:
-		runSeed(w, mustPlan(), *seedV, *sql)
+		runSeed(w, mustPlan(), *seedV, format)
 	case *fixt:
 		runEmit(w, mustPlan(), *entity, *seedV, *n)
 	case *mock:
@@ -107,11 +116,14 @@ func runEmit(w io.Writer, p *schema.Plan, entity string, seed uint64, n int) {
 	fmt.Fprintln(w, string(b))
 }
 
-func runSeed(w io.Writer, p *schema.Plan, seed uint64, sql bool) {
+func runSeed(w io.Writer, p *schema.Plan, seed uint64, format string) {
 	var sink schema.Sink
-	if sql {
+	switch format {
+	case "copy":
+		sink = schema.NewCopySink(w)
+	case "sql":
 		sink = schema.NewSQLSink(w)
-	} else {
+	default:
 		sink = schema.NewJSONSink(w)
 	}
 	if err := p.Seed(seed, sink); err != nil {
