@@ -40,6 +40,16 @@ func (p *Plan) Generate(entity string, seed uint64, n int) ([]*Record, error) {
 	return out, nil
 }
 
+// One yields a single record at index id. Used by the mock server.
+func (p *Plan) One(entity string, seed uint64, id, count int) (*Record, error) {
+	e := p.Entities[entity]
+	if e == nil {
+		return nil, fmt.Errorf("unknown entity %q", entity)
+	}
+	src := gen.At(seed, hashStr(entity), uint64(id))
+	return p.genRecord(e, src, id, count, seed, p.refResolver(seed, entity, id)), nil
+}
+
 // Seed streams every entity's dataset to the sink. Used by --seed.
 func (p *Plan) Seed(seed uint64, sink Sink) error {
 	for _, name := range p.Order {

@@ -12,6 +12,7 @@ import (
 
 	mvfaker "github.com/tmarq/mvfaker"
 	"github.com/tmarq/mvfaker/gen"
+	"github.com/tmarq/mvfaker/mock"
 	"github.com/tmarq/mvfaker/schema"
 )
 
@@ -41,7 +42,7 @@ func init() {
 func main() {
 	var (
 		fixt   = flag.Bool("fixt", false, "emit a few repeatable example records")
-		mock   = flag.Bool("mock", false, "emit realistic records (random seed)")
+		mockF  = flag.Bool("mock", false, "emit realistic records (random seed)")
 		seed   = flag.Bool("seed", false, "emit a full dataset to a sink")
 		prop   = flag.Bool("prop", false, "run property tests with shrinking (optionally name a rule)")
 		n      = flag.Int("n", 5, "record count")
@@ -50,6 +51,7 @@ func main() {
 		seedV  = flag.Uint64("s", 1, "seed value (determinism)")
 		sql    = flag.Bool("sql", false, "seed: emit SQL INSERTs instead of JSON")
 		copyF  = flag.Bool("copy", false, "seed: emit Postgres COPY (fast bulk load)")
+		serve  = flag.String("serve", "", "mock: serve HTTP on this address, e.g. :8080")
 		out    = flag.String("o", "", "output file (default stdout)")
 	)
 	flag.Parse()
@@ -79,7 +81,15 @@ func main() {
 		runSeed(w, mustPlan(), *seedV, format)
 	case *fixt:
 		runEmit(w, mustPlan(), *entity, *seedV, *n)
-	case *mock:
+	case *mockF:
+		if *serve != "" {
+			p := mustPlan()
+			fmt.Fprintf(os.Stderr, "mvfaker mock server on %s — try /%s\n", *serve, p.Order[0])
+			if err := mock.Serve(p, *serve, *seedV, *n); err != nil {
+				die(err)
+			}
+			return
+		}
 		// mock = same recipes, a "fresh-looking" seed
 		runEmit(w, mustPlan(), *entity, *seedV*2654435761+1, *n)
 	default:

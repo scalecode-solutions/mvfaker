@@ -5,6 +5,7 @@ One fake-data engine, four front doors — driven by a shared set of recipes.
 ```
 mvfaker --fixt example.hcl     # a few repeatable example records
 mvfaker --mock example.hcl     # realistic records, fresh-looking
+mvfaker --mock --serve :8080 example.hcl   # …or a stand-in HTTP API
 mvfaker --seed --sql example.hcl    # dataset → SQL INSERTs
 mvfaker --seed --copy example.hcl   # dataset → Postgres COPY (fast bulk load)
 mvfaker --prop                 # run registered property rules, shrink failures
