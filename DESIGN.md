@@ -132,8 +132,10 @@ multi-line.)*
 ## 8. The registry — the seam between config and code
 
 Config stays declarative; anything custom is written in code, named via
-`data.Register`, and referenced by name. `--prop`'s rule rides the same seam
-(future: registered rules), so all four modes share one recipe set.
+`data.Register`, and referenced by name. `--prop`'s rule rides the same seam:
+`mvfaker.RegisterRule(name, generator, predicate)` erases the generic type into a
+closure so rules of any shape share one registry, and `--prop [name]` runs them
+through the recording source + shrinker. All four modes share one recipe set.
 
 ## 9. Open questions / deferred
 

@@ -6,7 +6,20 @@ One fake-data engine, four front doors — driven by a shared set of recipes.
 mvfaker --fixt example.hcl     # a few repeatable example records
 mvfaker --mock example.hcl     # realistic records, fresh-looking
 mvfaker --seed --sql example.hcl   # a full, internally-consistent dataset → SQL
-mvfaker --prop                 # property test: invent edge cases, shrink failures
+mvfaker --prop                 # run registered property rules, shrink failures
+mvfaker --prop demo.no-big     # …or one named rule
+```
+
+Register property rules in code (the registry seam):
+
+```go
+mvfaker.RegisterRule("no-big",
+    gen.Slice(gen.IntRange(0, 8), gen.IntRange(0, 1000)),
+    func(xs []int) bool {
+        for _, x := range xs { if x >= 900 { return false } }
+        return true
+    })
+// --prop shrinks a failure to the simplest case, e.g. [900]
 ```
 
 ## Why it's different

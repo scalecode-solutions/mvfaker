@@ -42,7 +42,7 @@ func Struct[T any]() gen.Generator[T] {
 	}
 	return gen.New(func(s gen.Source) T {
 		var v T
-		_ = fillStruct(reflect.ValueOf(&v).Elem(), s)
+		_ = fillStruct(reflect.ValueOf(&v).Elem(), s, 0)
 		return v
 	})
 }
@@ -52,17 +52,22 @@ func fillPtr(ptr any, src gen.Source) error {
 	if rv.Kind() != reflect.Pointer || rv.Elem().Kind() != reflect.Struct {
 		return fmt.Errorf("mvfaker: Fill needs a pointer to a struct, got %T", ptr)
 	}
-	return fillStruct(rv.Elem(), src)
+	return fillStruct(rv.Elem(), src, 0)
 }
 
 // --- compiled, cached per-type metadata ------------------------------------
 
+// maxDepth bounds recursion so self-referential types (e.g. type Node struct {
+// Next *Node }) terminate: past the cap, pointers are left nil.
+const maxDepth = 8
+
 type fieldSpec struct {
-	index  int
-	name   string
-	from   string      // sibling field this derives from
-	hasGen bool        // resolved to a registered generator
-	mk     data.MakeFn // built once
+	index    int
+	name     string
+	from     string      // sibling field this derives from
+	hasGen   bool        // resolved to a registered generator
+	mk       data.MakeFn // built once
+	sliceLen int         // fixed slice length from `len=`; -1 = random
 }
 
 type structInfo struct {
@@ -93,10 +98,13 @@ func compile(t reflect.Type) *structInfo {
 		if tag == "-" {
 			continue
 		}
-		spec := fieldSpec{index: i, name: f.Name}
+		spec := fieldSpec{index: i, name: f.Name, sliceLen: -1}
 		genName, params, from := parseTag(tag)
 		if from != "" {
 			spec.from = from
+		}
+		if f.Type.Kind() == reflect.Slice {
+			spec.sliceLen = params.Int("len", -1)
 		}
 		if genName == "" {
 			genName, params, spec.from = infer(f, nameField, spec.from)
@@ -199,7 +207,7 @@ func firstNameField(t reflect.Type) string {
 
 // --- runtime fill ----------------------------------------------------------
 
-func fillStruct(rv reflect.Value, src gen.Source) error {
+func fillStruct(rv reflect.Value, src gen.Source, depth int) error {
 	info := infoFor(rv.Type())
 	if info.err != nil {
 		return info.err
@@ -222,25 +230,31 @@ func fillStruct(rv reflect.Value, src gen.Source) error {
 			deps[fs.name] = fv.Interface()
 			continue
 		}
-		if err := fillStructural(fv, src); err != nil {
+		if err := fillField(fv, fs, src, depth); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func fillStructural(fv reflect.Value, src gen.Source) error {
+func fillField(fv reflect.Value, fs fieldSpec, src gen.Source, depth int) error {
+	if depth >= maxDepth {
+		return nil // cycle guard: leave zero
+	}
 	switch fv.Kind() {
 	case reflect.Pointer:
 		fv.Set(reflect.New(fv.Type().Elem()))
-		return fillStructural(fv.Elem(), src)
+		return fillField(fv.Elem(), fs, src, depth+1)
 	case reflect.Struct:
-		return fillStruct(fv, src)
+		return fillStruct(fv, src, depth+1)
 	case reflect.Slice:
-		n := int(src.Draw(4)) // 0..3 elements
+		n := fs.sliceLen
+		if n < 0 {
+			n = int(src.Draw(4)) // 0..3 elements
+		}
 		sl := reflect.MakeSlice(fv.Type(), n, n)
 		for i := 0; i < n; i++ {
-			if err := fillElem(sl.Index(i), src); err != nil {
+			if err := fillElem(sl.Index(i), src, depth+1); err != nil {
 				return err
 			}
 		}
@@ -251,13 +265,16 @@ func fillStructural(fv reflect.Value, src gen.Source) error {
 	}
 }
 
-func fillElem(ev reflect.Value, src gen.Source) error {
+func fillElem(ev reflect.Value, src gen.Source, depth int) error {
+	if depth >= maxDepth {
+		return nil
+	}
 	switch ev.Kind() {
 	case reflect.Struct:
-		return fillStruct(ev, src)
+		return fillStruct(ev, src, depth+1)
 	case reflect.Pointer:
 		ev.Set(reflect.New(ev.Type().Elem()))
-		return fillElem(ev.Elem(), src)
+		return fillElem(ev.Elem(), src, depth+1)
 	default:
 		if name, ok := scalarGen(ev.Kind()); ok {
 			mk, err := data.Build(name, nil)
