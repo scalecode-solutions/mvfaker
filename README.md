@@ -26,6 +26,10 @@ mvfaker.RegisterRule("no-big",
 
 - **Coherent records.** `email` derives from `name` (`Michael Nguyen` →
   `michael.nguyen@…`), not random per-field garbage. Coherence is just `Bind`.
+- **Uniqueness without a mutable set.** `unique = true` is enforced by the runner
+  from the row index (Feistel permutation for ints, index-derived tag for
+  strings), so it stays parallel and deterministic — 50k rows, 50k distinct
+  emails, identical across runs.
 - **Pure value layer, stateful dataset layer.** Generators are pure functions
   `entropy → value`; all cross-row state (FKs, uniqueness, ordering) lives above
   them. That purity is what keeps shrinking, replay, and parallel seeding alive.

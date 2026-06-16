@@ -89,6 +89,8 @@ func decodeField(fb fieldBlock) (*Field, error) {
 			f.From, _ = gv.(string)
 		case "ref":
 			f.Ref, _ = gv.(string)
+		case "unique":
+			f.Unique, _ = gv.(bool)
 		default:
 			f.Params[name] = gv
 		}

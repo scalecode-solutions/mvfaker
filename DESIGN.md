@@ -102,6 +102,14 @@ ids are dense `0..count-1`, an FK is just a positional draw into the target's ro
 space — no pool is materialized, so seeding stays parallel. Sinks: `JSONSink`
 (accumulates `{entity: [...]}`), `SQLSink` (streams `INSERT`s, suited to scale).
 
+**Uniqueness** (`unique = true`) is the proof the purity boundary pays off: it's
+a genuinely stateful feature implemented with *no mutable set* and *no cross-row
+dependency*, so it stays parallel and deterministic. The unique value is derived
+from the row index (already unique): int fields get a Feistel permutation of
+`[0,count)` (shuffled, no suffix); string fields get a compact index-derived tag
+(woven before `@` for emails, keeping them valid and coherent). Generators stay
+pure; the runner owns the transform.
+
 ## 7. Config — HCL (restricted subset)
 
 Chosen because the domain is a reference graph and HCL is built for declarative
@@ -140,10 +148,10 @@ through the recording source + shrinker. All four modes share one recipe set.
 ## 9. Open questions / deferred
 
 - Tree-structured (not flat) shrinking for the recording source.
-- Uniqueness as a dataset-layer strategy; weighted/Zipf realism for names.
+- Weighted/Zipf realism for names; coherent address/phone/locale.
 - Counter-based RNG choice; codegen path for extreme-scale seeding.
 - More sinks (CSV, Postgres `COPY`), `--mock --serve` HTTP mode.
-- `--prop` from user code (registered rules) vs. the built-in demo.
+- Uniqueness for types beyond int/string; `unique` across a composite of fields.
 
 ## 10. Build order (done)
 

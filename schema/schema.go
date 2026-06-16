@@ -18,6 +18,7 @@ type Field struct {
 	Gen    string      // builtin/registered name (empty when Ref is set)
 	From   string      // coherence: derive from this sibling field's value
 	Ref    string      // FK: "entity.id"
+	Unique bool        // dataset-layer uniqueness (runner-enforced)
 	Params data.Params // declarative attrs
 
 	make data.MakeFn // resolved from the registry
@@ -93,8 +94,9 @@ func (r *Record) MarshalJSON() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// genRecord builds one record. refFn resolves a "entity.id" FK to a concrete id.
-func (p *Plan) genRecord(e *Entity, s gen.Source, id int, refFn func(ref string) any) *Record {
+// genRecord builds one record. id is the row index; count is the entity's total
+// row count (the uniqueness domain). refFn resolves an "entity.id" FK.
+func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, refFn func(ref string) any) *Record {
 	rec := newRecord()
 	rec.Set("id", id)
 	for _, f := range e.Fields {
@@ -106,7 +108,11 @@ func (p *Plan) genRecord(e *Entity, s gen.Source, id int, refFn func(ref string)
 		if f.From != "" {
 			dep = rec.Get(f.From)
 		}
-		rec.Set(f.Name, f.make(dep).Generate(s.Split()))
+		val := f.make(dep).Generate(s.Split())
+		if f.Unique {
+			val = makeUnique(val, id, count, seed, e.Name, f.Name)
+		}
+		rec.Set(f.Name, val)
 	}
 	return rec
 }

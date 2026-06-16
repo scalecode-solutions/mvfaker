@@ -53,6 +53,49 @@ func TestEmailCoherence(t *testing.T) {
 	}
 }
 
+func TestUniqueness(t *testing.T) {
+	p := &schema.Plan{
+		Entities: map[string]*schema.Entity{
+			"u": {Name: "u", Fields: []*schema.Field{
+				{Name: "name", Gen: "name.full"},
+				{Name: "email", Gen: "internet.email", From: "name", Unique: true},
+				// base range 0..5, but unique over 500 rows: permutation widens it
+				{Name: "code", Gen: "number", Params: data.Params{"min": 0, "max": 5}, Unique: true},
+			}},
+		},
+		Order:  []string{"u"},
+		Counts: map[string]int{"u": 500},
+	}
+	if err := p.Resolve(); err != nil {
+		t.Fatal(err)
+	}
+	recs, _ := p.Generate("u", 9, 500)
+
+	emails := map[string]bool{}
+	codes := map[int]bool{}
+	for _, r := range recs {
+		e := r.Get("email").(string)
+		if emails[e] {
+			t.Fatalf("duplicate email: %s", e)
+		}
+		emails[e] = true
+		c := r.Get("code").(int)
+		if codes[c] {
+			t.Fatalf("duplicate code: %d", c)
+		}
+		codes[c] = true
+	}
+	if len(emails) != 500 || len(codes) != 500 {
+		t.Fatalf("expected 500 unique of each, got emails=%d codes=%d", len(emails), len(codes))
+	}
+	// the Feistel permutation must cover [0,500) exactly
+	for c := range codes {
+		if c < 0 || c >= 500 {
+			t.Fatalf("permuted code %d out of [0,500)", c)
+		}
+	}
+}
+
 func TestForeignKeyIntegrity(t *testing.T) {
 	p := buildPlan()
 	recs, _ := p.Generate("order", 3, 1000)

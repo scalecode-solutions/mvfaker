@@ -3,8 +3,9 @@ entity "customer" {
     gen = "name.full"
   }
   field "email" {
-    gen  = "internet.email"
-    from = "name" # coherence: email derives from the name
+    gen    = "internet.email"
+    from   = "name" # coherence: email derives from the name
+    unique = true   # dataset-layer uniqueness, no mutable set
   }
   field "age" {
     gen  = "number"

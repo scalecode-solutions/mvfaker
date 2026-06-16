@@ -35,7 +35,7 @@ func (p *Plan) Generate(entity string, seed uint64, n int) ([]*Record, error) {
 	out := make([]*Record, n)
 	for i := 0; i < n; i++ {
 		src := gen.At(seed, hashStr(entity), uint64(i))
-		out[i] = p.genRecord(e, src, i, p.refResolver(seed, entity, i))
+		out[i] = p.genRecord(e, src, i, n, seed, p.refResolver(seed, entity, i))
 	}
 	return out, nil
 }
@@ -53,7 +53,7 @@ func (p *Plan) Seed(seed uint64, sink Sink) error {
 		}
 		for i := 0; i < n; i++ {
 			src := gen.At(seed, hashStr(name), uint64(i))
-			rec := p.genRecord(e, src, i, p.refResolver(seed, name, i))
+			rec := p.genRecord(e, src, i, n, seed, p.refResolver(seed, name, i))
 			if err := sink.Write(rec); err != nil {
 				return err
 			}
