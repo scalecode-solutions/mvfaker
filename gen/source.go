@@ -3,8 +3,6 @@
 // the dataset layer. See DESIGN.md.
 package gen
 
-import "math/rand/v2"
-
 // Source is the only place randomness enters the system. The primitive is
 // splittable, not merely drawable: every structural step (a field, a slice
 // index, a Bind) takes a fresh child via Split. Invariant: the all-zero draw
@@ -64,36 +62,5 @@ func (s *posSource) Split() Source {
 	return &posSource{key: child}
 }
 
-// --- Recording source: linear, for property testing + shrinking. -----------
-//
-// Records every draw so the choice-sequence becomes the seed; the shrinker
-// minimizes that sequence and replays. Split returns the same stream (v0
-// shrinking is over a flat sequence; structured/tree shrinking is a rough edge
-// noted in DESIGN.md).
-
-type recSource struct {
-	rng    *rand.Rand
-	forced []uint64 // replay tape; consumed positionally
-	pos    int
-	trace  []uint64 // realized draws, in [0,n)
-}
-
-func newRecSource(rng *rand.Rand) *recSource { return &recSource{rng: rng} }
-func replaySource(tape []uint64) *recSource  { return &recSource{forced: tape} }
-
-func (s *recSource) Draw(n uint64) uint64 {
-	if n == 0 {
-		return 0
-	}
-	var v uint64
-	if s.pos < len(s.forced) {
-		v = s.forced[s.pos] % n
-	} else if s.rng != nil {
-		v = s.rng.Uint64() % n
-	} // else: past the tape with no rng -> 0 (simplest)
-	s.pos++
-	s.trace = append(s.trace, v)
-	return v
-}
-
-func (s *recSource) Split() Source { return s }
+// The recording source used for property testing + shrinking is tree-structured;
+// it lives in shrink.go alongside the shrinker.

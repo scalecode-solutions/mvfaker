@@ -67,11 +67,14 @@ each generator's simplest value, giving the shrinker a direction.
   splitmix64. Reproducible, order-independent, and trivially parallel — row
   #1,000,000 is generable without touching rows 0..999,999. Default for
   fixt/mock/seed.
-- **Recording**: linear; records each draw so the choice-sequence *is* the seed.
-  The shrinker minimizes that sequence and replays. Used by `--prop`.
-  *(Rough edge: shrinking is over a flat sequence; structured/tree shrinking is
-  future. The deletion pass recovers most structural minimization in practice —
-  lists collapse to a single element.)*
+- **Recording** (`shrink.go`): tree-structured. Draws are recorded in a tree that
+  mirrors `Split()`, so the shrinker can prune a whole subtree — one `List`
+  element, an irrelevant nested structure — without disturbing its siblings,
+  which a flat tape can't (deleting mid-tape shifts everything). A strict
+  size-decrease gate (fewer nodes, then draws, then draw-sum) guarantees
+  termination and rejects pruning a child the generator just regrows. Used by
+  `--prop`. Pair with `List` (each element its own subtree) for clean structural
+  shrinking; `Slice` (length-up-front) only tail-truncates.
 
 ## 5. Value — `Generator[T]`
 
@@ -150,7 +153,6 @@ through the recording source + shrinker. All four modes share one recipe set.
 
 ## 9. Open questions / deferred
 
-- Tree-structured (not flat) shrinking for the recording source.
 - Weighted/Zipf realism for names; coherent address/phone/locale.
 - Counter-based RNG choice; codegen path for extreme-scale seeding.
 - More sinks (CSV, Postgres `COPY`), `--mock --serve` HTTP mode.

@@ -20,7 +20,7 @@ import (
 // rules via mvfaker.RegisterRule in your own binary — the registry is the seam.
 func init() {
 	mvfaker.RegisterRule("demo.no-big",
-		gen.Slice(gen.IntRange(0, 8), gen.IntRange(0, 1000)),
+		gen.List(8, gen.IntRange(0, 1000)),
 		func(xs []int) bool {
 			for _, x := range xs {
 				if x >= 900 {

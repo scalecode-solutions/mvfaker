@@ -88,6 +88,27 @@ func Slice[T any](n Generator[int], g Generator[T]) Generator[[]T] {
 	})
 }
 
+// List generates up to max elements, each in its own subtree (a per-element
+// "continue?" draw plus the element). Because every element is a distinct child,
+// the tree shrinker can prune any element — including from the middle — cleanly.
+// Prefer this over Slice when the values feed property tests.
+func List[T any](max int, g Generator[T]) Generator[[]T] {
+	if max < 0 {
+		max = 0
+	}
+	return New(func(s Source) []T {
+		out := make([]T, 0, max)
+		for len(out) < max {
+			c := s.Split()        // one span per element: holds the continue-bit + value
+			if c.Draw(100) < 30 { // ~30% stop
+				break
+			}
+			out = append(out, g.Generate(c.Split()))
+		}
+		return out
+	})
+}
+
 // Optional yields nil with probability ~ (1-p). p in [0,1]. Draw biased so that
 // "present" is the simpler value the shrinker won't strip.
 func Optional[T any](g Generator[T], p float64) Generator[*T] {

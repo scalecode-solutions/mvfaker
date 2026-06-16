@@ -9,7 +9,7 @@ import (
 
 func TestRegisteredRuleFailsAndShrinks(t *testing.T) {
 	mvfaker.RegisterRule("test.no-big",
-		gen.Slice(gen.IntRange(0, 8), gen.IntRange(0, 1000)),
+		gen.List(8, gen.IntRange(0, 1000)),
 		func(xs []int) bool {
 			for _, x := range xs {
 				if x >= 900 {
