@@ -24,6 +24,23 @@ mvfaker --prop                 # property test: invent edge cases, shrink failur
   objects code builds. A registry is the seam: anything config can't express is
   registered in code and referenced by name.
 
+## Code-side: fill a struct
+
+```go
+type User struct {
+    Name  string `fake:"name.full"`
+    Email string `fake:"internet.email,from=Name"` // coherence
+    Age   int    `fake:"number,min=18,max=90"`
+}
+var u User
+mvfaker.FillAt(&u, 1)         // deterministic
+g := mvfaker.Struct[User]()   // …or a composable Generator[User]
+```
+
+Untagged fields are inferred (by name, then Go kind); nested structs and slices
+fill automatically. `Struct[T]()` is an ordinary generator, so it composes with
+`gen.Slice`, `gen.Optional`, and the rest.
+
 See [DESIGN.md](DESIGN.md) for the full architecture.
 
 ## Status

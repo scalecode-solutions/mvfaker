@@ -77,13 +77,22 @@ each generator's simplest value, giving the shrinker a direction.
 
 Pure `Generate(Source) T`. Combinators: `Map`, `Bind` (the coherence spine),
 `OneOf`, `Weighted`, `Slice`, `Optional`; primitives `IntRange`, `Float64Range`,
-`NormalInt`, `Bool`, `Pick`. Two front-ends emit into this one layer:
+`NormalInt`, `Bool`, `Pick`. Three front-ends emit into this one layer:
 
 1. **Combinators** — direct Go, full power.
 2. **Registry + HCL** — named builders (`data.Register`) that config references.
+3. **Struct tags** — `mvfaker.Fill(&v)` / `Struct[T]()`, compiled once per type.
 
 Coherence within a record is `Bind`: the email builder receives the already-
 generated name and derives its local-part from it.
+
+The **struct-tag front-end** (`fill.go`, package `mvfaker`) is the code-side face:
+it compiles a struct type into a generator *once* (cached per `reflect.Type`) and
+fills by reflection. `fake:"internet.email,from=Name"` lowers to the same
+registry builder + `Bind` coherence; nested structs, slices and pointers are
+filled structurally; untagged fields are inferred by name then Go kind. It is
+sugar over the same registry and Source — `mvfaker.Struct[T]()` returns an
+ordinary `Generator[T]`, so struct-fill composes with `gen.Slice`, etc.
 
 ## 6. Dataset — `Plan` + runner
 
