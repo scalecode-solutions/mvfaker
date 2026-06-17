@@ -55,6 +55,7 @@ func main() {
 		seedV      = flag.Uint64("s", 1, "seed value (determinism)")
 		sql        = flag.Bool("sql", false, "seed: emit SQL INSERTs instead of JSON")
 		copyF      = flag.Bool("copy", false, "seed: emit Postgres COPY (fast bulk load)")
+		ndjson     = flag.String("ndjson", "", "seed: write <dir>/<entity>.ndjson (for mongoimport etc.)")
 		serve      = flag.String("serve", "", "mock: serve HTTP on this address, e.g. :8080")
 		check      = flag.Bool("check", false, "verify config columns against --schema and exit; emits no data")
 		schemaPath = flag.String("schema", "", "check: path to a schema.sql to validate against")
@@ -95,6 +96,13 @@ func main() {
 		p := mustPlan()
 		if *dryRun {
 			runDryRun(w, p)
+			return
+		}
+		if *ndjson != "" {
+			if err := p.Seed(*seedV, schema.NewNDJSONDirSink(*ndjson)); err != nil {
+				die(err)
+			}
+			fmt.Fprintf(os.Stderr, "wrote %d collections to %s/\n", len(p.Order), *ndjson)
 			return
 		}
 		runSeed(w, p, *seedV, format)

@@ -1,0 +1,19 @@
+services:
+  mongo:
+    image: mongo:7
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  seed:
+    build:
+      context: ../..
+      dockerfile: integration/mongo/seed/Dockerfile
+    environment:
+      MONGO_URI: mongodb://mongo:27017/forum
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: "no"

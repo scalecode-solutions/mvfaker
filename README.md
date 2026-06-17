@@ -6,8 +6,10 @@ One fake-data engine, four front doors — driven by a shared set of recipes.
 mvfaker --fixt example.hcl     # a few repeatable example records
 mvfaker --mock example.hcl     # realistic records, fresh-looking
 mvfaker --mock --serve :8080 example.hcl   # …or a stand-in HTTP API
-mvfaker --seed --sql example.hcl    # dataset → SQL INSERTs
-mvfaker --seed --copy example.hcl   # dataset → Postgres COPY (fast bulk load)
+mvfaker --seed --sql example.hcl       # dataset → SQL INSERTs (SQLite/MySQL/Postgres)
+mvfaker --seed --copy example.hcl      # dataset → Postgres COPY (fast bulk load)
+mvfaker --seed --ndjson out example.hcl # dataset → out/<entity>.ndjson (MongoDB etc.)
+mvfaker --check --schema schema.sql example.hcl  # verify config vs schema; emits nothing
 mvfaker --prop                 # run registered property rules, shrink failures
 mvfaker --prop demo.no-big     # …or one named rule
 mvfaker --gen -pkg fixtures example.hcl > fixtures.go  # compile to Go (~11× faster seeding)

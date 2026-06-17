@@ -1,9 +1,12 @@
 package schema
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -127,6 +130,57 @@ func escapeCopy(s string) string {
 	s = strings.ReplaceAll(s, "\r", `\r`)
 	return s
 }
+
+// --- NDJSON sink: one JSON-Lines file per entity, the document-store path. --
+//
+// Writes <dir>/<entity>.ndjson (one compact JSON doc per line) — the native
+// format for `mongoimport`, Elasticsearch bulk, BigQuery, etc. One file per
+// collection because document importers load one collection at a time.
+
+type NDJSONDirSink struct {
+	dir string
+	f   *os.File
+	bw  *bufio.Writer
+}
+
+func NewNDJSONDirSink(dir string) *NDJSONDirSink { return &NDJSONDirSink{dir: dir} }
+
+func (s *NDJSONDirSink) Begin(e *Entity) error {
+	if err := os.MkdirAll(s.dir, 0o755); err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(s.dir, e.Name+".ndjson"))
+	if err != nil {
+		return err
+	}
+	s.f, s.bw = f, bufio.NewWriter(f)
+	return nil
+}
+
+func (s *NDJSONDirSink) Write(r *Record) error {
+	b, err := r.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	if _, err := s.bw.Write(b); err != nil {
+		return err
+	}
+	return s.bw.WriteByte('\n')
+}
+
+func (s *NDJSONDirSink) End(*Entity) error {
+	if s.bw != nil {
+		if err := s.bw.Flush(); err != nil {
+			return err
+		}
+	}
+	if s.f != nil {
+		return s.f.Close()
+	}
+	return nil
+}
+
+func (s *NDJSONDirSink) Close() error { return nil }
 
 // --- JSON sink: accumulates into {entity: [...]} , flushed on Close. --------
 
