@@ -7,27 +7,14 @@ import (
 	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
-// The 249-country dataset (dataset_gen.go) is the authoritative locale reference:
-// name, ISO codes, calling code, currency, capital, continent. `details` is a
-// thin overlay of city/region/postal specifics for the countries we have richer
-// data for, keyed by ISO alpha-2; everything else falls back to the capital and
-// a generic postal format. Coherence rides the `from` mechanism: derive code /
-// calling code / city / currency from a chosen country.
-type detail struct {
-	cities    []string
-	regions   []string
-	postalFmt string // # = digit, @ = uppercase letter
-}
+// The 249-country dataset (dataset_gen.go) is the authoritative reference: name,
+// ISO codes, calling code, currency, capital, continent. City/region/postal
+// detail comes from locale files (data/locales/, see locale.go), looked up by
+// the country's ISO alpha-2; countries without a locale fall back to the capital
+// and a generic postal format. Coherence rides the `from` mechanism: derive code
+// / calling code / city / currency from a chosen country.
 
-var details = map[string]detail{
-	"US": {[]string{"Springfield", "Austin", "Portland", "Denver", "Tampa", "Chicago", "Seattle"}, []string{"IL", "TX", "OR", "CO", "FL", "WA"}, "#####"},
-	"GB": {[]string{"London", "Manchester", "Bristol", "Leeds"}, []string{"England", "Scotland", "Wales"}, "@@## #@@"},
-	"DE": {[]string{"Berlin", "Munich", "Hamburg", "Cologne"}, []string{"BY", "NW", "BE", "HH"}, "#####"},
-	"JP": {[]string{"Tokyo", "Osaka", "Kyoto", "Nagoya"}, []string{"Kanto", "Kansai", "Chubu"}, "###-####"},
-	"BR": {[]string{"Sao Paulo", "Rio de Janeiro", "Salvador"}, []string{"SP", "RJ", "BA"}, "#####-###"},
-}
-
-var streets = []string{"Oak St", "Maple Ave", "Main St", "Park Rd", "Cedar Ln", "Elm St", "Hill Rd"}
+var fallbackStreets = []string{"Oak St", "Maple Ave", "Main St", "Park Rd", "Cedar Ln", "Elm St", "Hill Rd"}
 
 var (
 	countryByName = map[string]Country{}
@@ -119,8 +106,8 @@ func init() {
 	reg0("address.city", func(dep any) gen.Generator[any] {
 		return gen.New(func(s gen.Source) any {
 			c := resolveCountry(dep, s)
-			if d, ok := details[c.A2]; ok && len(d.cities) > 0 {
-				return d.cities[s.Draw(uint64(len(d.cities)))]
+			if l := localeForCountry(c.A2); l != nil && len(l.Cities) > 0 {
+				return l.Cities[s.Draw(uint64(len(l.Cities)))]
 			}
 			if c.Capital != "" {
 				return c.Capital
@@ -132,8 +119,8 @@ func init() {
 	reg0("address.region", func(dep any) gen.Generator[any] {
 		return gen.New(func(s gen.Source) any {
 			c := resolveCountry(dep, s)
-			if d, ok := details[c.A2]; ok && len(d.regions) > 0 {
-				return d.regions[s.Draw(uint64(len(d.regions)))]
+			if l := localeForCountry(c.A2); l != nil && len(l.Regions) > 0 {
+				return l.Regions[s.Draw(uint64(len(l.Regions)))]
 			}
 			return ""
 		})
@@ -143,8 +130,8 @@ func init() {
 		return gen.New(func(s gen.Source) any {
 			c := resolveCountry(dep, s)
 			f := "#####"
-			if d, ok := details[c.A2]; ok && d.postalFmt != "" {
-				f = d.postalFmt
+			if l := localeForCountry(c.A2); l != nil && l.PostalFormat != "" {
+				f = l.PostalFormat
 			}
 			return expandFmt(f).Generate(s.Split())
 		})
@@ -179,17 +166,21 @@ func init() {
 		return gen.New(func(s gen.Source) any {
 			c := countries[s.Draw(uint64(len(countries)))]
 			num := 100 + s.Draw(9900)
-			street := streets[s.Draw(uint64(len(streets)))]
 			city := c.Capital
 			f := "#####"
-			if d, ok := details[c.A2]; ok {
-				if len(d.cities) > 0 {
-					city = d.cities[s.Draw(uint64(len(d.cities)))]
+			streets := fallbackStreets
+			if l := localeForCountry(c.A2); l != nil {
+				if len(l.Cities) > 0 {
+					city = l.Cities[s.Draw(uint64(len(l.Cities)))]
 				}
-				if d.postalFmt != "" {
-					f = d.postalFmt
+				if l.PostalFormat != "" {
+					f = l.PostalFormat
+				}
+				if len(l.Streets) > 0 {
+					streets = l.Streets
 				}
 			}
+			street := streets[s.Draw(uint64(len(streets)))]
 			postal := expandFmt(f).Generate(s.Split())
 			return fmt.Sprintf("%d %s, %s %s, %s", num, street, city, postal, c.Name)
 		})

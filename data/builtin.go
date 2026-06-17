@@ -7,14 +7,19 @@ import (
 )
 
 func init() {
+	// Names read from a locale (param `locale`, default en-US). A locale that
+	// hasn't supplied its own names yet falls back to the default's.
 	Register("name.first", func(p Params) (MakeFn, error) {
-		return func(any) gen.Generator[any] { return boxed(zipfPick(firstNames)) }, nil
+		loc := localeFor(p.Str("locale", defaultLocaleCode))
+		return func(any) gen.Generator[any] { return boxed(zipfPick(loc.firstNamesOf())) }, nil
 	})
 	Register("name.last", func(p Params) (MakeFn, error) {
-		return func(any) gen.Generator[any] { return boxed(zipfPick(lastNames)) }, nil
+		loc := localeFor(p.Str("locale", defaultLocaleCode))
+		return func(any) gen.Generator[any] { return boxed(zipfPick(loc.lastNamesOf())) }, nil
 	})
 	Register("name.full", func(p Params) (MakeFn, error) {
-		first, last := zipfPick(firstNames), zipfPick(lastNames)
+		loc := localeFor(p.Str("locale", defaultLocaleCode))
+		first, last := zipfPick(loc.firstNamesOf()), zipfPick(loc.lastNamesOf())
 		g := gen.New(func(s gen.Source) string {
 			return first.Generate(s.Split()) + " " + last.Generate(s.Split())
 		})
@@ -31,7 +36,7 @@ func init() {
 				if name, ok := dep.(string); ok && strings.TrimSpace(name) != "" {
 					local = slug(name)
 				} else {
-					local = slug(gen.PickSlice(firstNames).Generate(s.Split()))
+					local = slug(gen.PickSlice(defaultLocale().FirstNames).Generate(s.Split()))
 					local += itoa(int(s.Split().Draw(900) + 100))
 				}
 				dom := gen.PickSlice(domains).Generate(s.Split())

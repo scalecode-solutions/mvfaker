@@ -1,0 +1,9 @@
+{
+"code": "pt-BR",
+"name": "Portuguese (Brazil)",
+"country": "BR",
+"cities": ["Sao Paulo", "Rio de Janeiro", "Salvador", "Brasilia", "Fortaleza", "Belo Horizonte"],
+"regions": ["SP", "RJ", "BA", "DF", "CE", "MG"],
+"streets": ["Rua das Flores", "Avenida Brasil", "Rua da Praia"],
+"postalFormat": "#####-###"
+}

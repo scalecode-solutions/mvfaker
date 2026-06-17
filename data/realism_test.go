@@ -13,11 +13,11 @@ func TestCityCoherentWithCountry(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := mk("United States") // dep = a country name from the dataset
-	us := details["US"].cities
+	us := localeForCountry("US").Cities
 	for i := 0; i < 100; i++ {
 		city := g.Generate(gen.At(uint64(i))).(string)
 		if !contains(us, city) {
-			t.Fatalf("US city %q not in detailed set %v", city, us)
+			t.Fatalf("US city %q not in en-US locale %v", city, us)
 		}
 	}
 }
@@ -45,9 +45,48 @@ func TestCountryCodeCoherence(t *testing.T) {
 }
 
 func TestDatasetSize(t *testing.T) {
-	if len(firstNames) < 500 || len(lastNames) < 900 || len(countries) < 240 {
+	d := defaultLocale()
+	if len(d.FirstNames) < 500 || len(d.LastNames) < 900 || len(countries) < 240 {
 		t.Fatalf("dataset too small: first=%d last=%d countries=%d",
-			len(firstNames), len(lastNames), len(countries))
+			len(d.FirstNames), len(d.LastNames), len(countries))
+	}
+}
+
+func TestLocalesLoad(t *testing.T) {
+	codes := LocaleCodes()
+	if len(codes) < 5 {
+		t.Fatalf("expected >=5 locales, got %v", codes)
+	}
+	// every locale bound to a country must reference a real country
+	for _, code := range codes {
+		l := localeFor(code)
+		if l.Country != "" {
+			if _, ok := countryByA2[l.Country]; !ok {
+				t.Fatalf("locale %s references unknown country %q", code, l.Country)
+			}
+		}
+	}
+}
+
+func TestLocaleNameFallback(t *testing.T) {
+	// de-DE has no names yet → name.full should fall back to en-US names, not crash
+	mk, err := Build("name.full", Params{"locale": "de-DE"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := mk(nil).Generate(gen.At(1)).(string); got == "" {
+		t.Fatal("locale name fallback produced empty name")
+	}
+}
+
+func TestLocaleCityCoherence(t *testing.T) {
+	// a JP-bound country should yield JP cities via the ja-JP locale
+	mk, _ := Build("address.city", nil)
+	jp := localeForCountry("JP").Cities
+	for i := 0; i < 50; i++ {
+		if city := mk("Japan").Generate(gen.At(uint64(i))).(string); !contains(jp, city) {
+			t.Fatalf("Japan city %q not in ja-JP locale %v", city, jp)
+		}
 	}
 }
 

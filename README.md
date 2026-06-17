@@ -181,6 +181,15 @@ Everything coheres via `from`: set a `country` field, then `from = "country"` on
 attribute names: `gen`, `from`, `ref`, `unique` — generator params use other
 names, e.g. `date` takes `min`/`max` years.) Data sources: [ATTRIBUTION.md](ATTRIBUTION.md).
 
+### Locales
+
+Region-specific data (names, cities, regions, postal formats) lives in drop-in
+JSON files under [`data/locales/`](data/locales/) — `go:embed`'d at build, no Go
+required to add one. Pass `locale = "ja-JP"` to `name.*`/`address.*`, or let
+`from = "country"` pick the locale automatically. Partial locales fall back to
+`en-US`, so "just the cities and postal format for my country" is a valid PR.
+**Adding your locale: [CONTRIBUTING.md](CONTRIBUTING.md).**
+
 ## Status & license
 
 `v0` — API and seeded output not yet frozen. Rough edges welcome.

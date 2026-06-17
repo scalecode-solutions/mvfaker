@@ -1,0 +1,9 @@
+{
+"code": "de-DE",
+"name": "German (Germany)",
+"country": "DE",
+"cities": ["Berlin", "Munich", "Hamburg", "Cologne", "Frankfurt", "Stuttgart", "Dusseldorf"],
+"regions": ["BY", "NW", "BE", "HH", "HE", "BW"],
+"streets": ["Hauptstrasse", "Bahnhofstrasse", "Schulstrasse", "Gartenweg"],
+"postalFormat": "#####"
+}

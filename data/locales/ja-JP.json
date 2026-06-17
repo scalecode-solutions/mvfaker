@@ -1,0 +1,9 @@
+{
+"code": "ja-JP",
+"name": "Japanese (Japan)",
+"country": "JP",
+"cities": ["Tokyo", "Osaka", "Kyoto", "Nagoya", "Yokohama", "Sapporo", "Fukuoka"],
+"regions": ["Kanto", "Kansai", "Chubu", "Kyushu", "Tohoku"],
+"streets": ["Chuo-dori", "Sakura-dori", "Showa-dori"],
+"postalFormat": "###-####"
+}

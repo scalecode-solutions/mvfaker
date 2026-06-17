@@ -1,0 +1,9 @@
+{
+"code": "en-GB",
+"name": "English (United Kingdom)",
+"country": "GB",
+"cities": ["London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Bristol", "Liverpool", "Edinburgh"],
+"regions": ["England", "Scotland", "Wales", "Northern Ireland"],
+"streets": ["High St", "Station Rd", "Church Ln", "Victoria Rd", "Mill Ln"],
+"postalFormat": "@@## #@@"
+}
