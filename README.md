@@ -170,6 +170,9 @@ currencies, capitals, continents): `country`, `country.code`, `country.code3`,
 `currency.code`, plus `address.city/region/postal/full`, `phone`, and US
 `us.state` / `us.state.code`.
 
+Network: `ipv4` (public), `ipv4.private` (RFC 1918), `ipv6` (canonical RFC 5952,
+with `::` compression), `mac`.
+
 Also: `internet.email`, `date`, `datetime`, `money`/`price`, `number`, `bool`,
 `uuid`, `lorem.word(s)`.
 
