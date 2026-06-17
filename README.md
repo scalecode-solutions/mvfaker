@@ -20,7 +20,9 @@ mvfaker --gen -pkg fixtures example.hcl > fixtures.go  # compile to Go (~11× fa
 ### Install
 
 ```bash
-go build -o mvfaker ./cmd/mvfaker      # or: go install ./cmd/mvfaker
+go install github.com/scalecode-solutions/mvfaker/cmd/mvfaker@latest
+# …or from a clone:
+go build -o mvfaker ./cmd/mvfaker
 ```
 
 ### 1. Write a config (`example.hcl`)
@@ -98,13 +100,10 @@ mvfaker.RegisterRule("no-big",
     })
 ```
 
-### Importing it from another (private) project
-
-The repo is private, so tell Go not to use the public proxy:
+### Importing it in another project
 
 ```bash
-export GOPRIVATE=github.com/scalecode-solutions/*
-go get github.com/scalecode-solutions/mvfaker
+go get github.com/scalecode-solutions/mvfaker@latest
 ```
 
 ### Which mode for what
