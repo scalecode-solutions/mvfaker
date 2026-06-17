@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tmarq/mvfaker/gen"
+	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
 // A place bundles internally-consistent locale data. Coherence across address

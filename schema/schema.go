@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/tmarq/mvfaker/data"
-	"github.com/tmarq/mvfaker/gen"
+	"github.com/scalecode-solutions/mvfaker/data"
+	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
 // Field is one column of an entity.

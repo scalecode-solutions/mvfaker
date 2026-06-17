@@ -20,8 +20,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tmarq/mvfaker/data"
-	"github.com/tmarq/mvfaker/gen"
+	"github.com/scalecode-solutions/mvfaker/data"
+	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
 // Fill populates the struct pointed to by ptr using a fresh random seed.

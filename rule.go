@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/tmarq/mvfaker/gen"
+	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
 // RuleResult reports a property check in a type-erased form for the CLI.

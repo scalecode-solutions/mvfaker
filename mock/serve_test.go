@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/tmarq/mvfaker/mock"
-	"github.com/tmarq/mvfaker/schema"
+	"github.com/scalecode-solutions/mvfaker/mock"
+	"github.com/scalecode-solutions/mvfaker/schema"
 )
 
 func testPlan(t *testing.T) *schema.Plan {

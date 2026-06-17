@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tmarq/mvfaker/data"
-	"github.com/tmarq/mvfaker/schema"
+	"github.com/scalecode-solutions/mvfaker/data"
+	"github.com/scalecode-solutions/mvfaker/schema"
 )
 
 func buildPlan() *schema.Plan {

@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclparse"
-	"github.com/tmarq/mvfaker/data"
+	"github.com/scalecode-solutions/mvfaker/data"
 	"github.com/zclconf/go-cty/cty"
 )
 

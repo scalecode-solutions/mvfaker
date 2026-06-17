@@ -10,10 +10,10 @@ import (
 	"io"
 	"os"
 
-	mvfaker "github.com/tmarq/mvfaker"
-	"github.com/tmarq/mvfaker/gen"
-	"github.com/tmarq/mvfaker/mock"
-	"github.com/tmarq/mvfaker/schema"
+	mvfaker "github.com/scalecode-solutions/mvfaker"
+	"github.com/scalecode-solutions/mvfaker/gen"
+	"github.com/scalecode-solutions/mvfaker/mock"
+	"github.com/scalecode-solutions/mvfaker/schema"
 )
 
 // Demo rules so `--prop` works out of the box. Real usage registers your own

@@ -3,7 +3,7 @@ package data
 import (
 	"strings"
 
-	"github.com/tmarq/mvfaker/gen"
+	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
 func init() {

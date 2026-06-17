@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tmarq/mvfaker/gen"
+	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
 // refResolver returns a deterministic FK for row ix of the given entity. Because

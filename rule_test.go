@@ -3,8 +3,8 @@ package mvfaker_test
 import (
 	"testing"
 
-	mvfaker "github.com/tmarq/mvfaker"
-	"github.com/tmarq/mvfaker/gen"
+	mvfaker "github.com/scalecode-solutions/mvfaker"
+	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
 func TestRegisteredRuleFailsAndShrinks(t *testing.T) {

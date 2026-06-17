@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tmarq/mvfaker/schema"
+	"github.com/scalecode-solutions/mvfaker/schema"
 )
 
 // Handler builds the mock HTTP handler for a plan.

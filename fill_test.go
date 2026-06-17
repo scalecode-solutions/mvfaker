@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	mvfaker "github.com/tmarq/mvfaker"
-	"github.com/tmarq/mvfaker/gen"
+	mvfaker "github.com/scalecode-solutions/mvfaker"
+	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
 type Address struct {

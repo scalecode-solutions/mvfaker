@@ -1,4 +1,4 @@
-module github.com/tmarq/mvfaker
+module github.com/scalecode-solutions/mvfaker
 
 go 1.26.4
 
