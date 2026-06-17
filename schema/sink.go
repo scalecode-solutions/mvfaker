@@ -2,6 +2,7 @@ package schema
 
 import (
 	"bufio"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -129,6 +130,75 @@ func escapeCopy(s string) string {
 	s = strings.ReplaceAll(s, "\n", `\n`)
 	s = strings.ReplaceAll(s, "\r", `\r`)
 	return s
+}
+
+// --- CSV sink: one CSV file per entity, the universal relational path. ------
+//
+// Writes <dir>/<entity>.csv (header row + data). CSV is the lowest common
+// denominator: Postgres COPY ... FROM CSV, MySQL LOAD DATA INFILE, SQLite
+// .import, and every spreadsheet read it.
+
+type CSVDirSink struct {
+	dir string
+	f   *os.File
+	w   *csv.Writer
+}
+
+func NewCSVDirSink(dir string) *CSVDirSink { return &CSVDirSink{dir: dir} }
+
+func (s *CSVDirSink) Begin(e *Entity) error {
+	if err := os.MkdirAll(s.dir, 0o755); err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(s.dir, e.Name+".csv"))
+	if err != nil {
+		return err
+	}
+	s.f, s.w = f, csv.NewWriter(f)
+	header := []string{"id"}
+	for _, fld := range e.Fields {
+		header = append(header, fld.Name)
+	}
+	return s.w.Write(header)
+}
+
+func (s *CSVDirSink) Write(r *Record) error {
+	row := make([]string, len(r.Keys))
+	for i, k := range r.Keys {
+		row[i] = csvCell(r.Vals[k])
+	}
+	return s.w.Write(row)
+}
+
+func (s *CSVDirSink) End(*Entity) error {
+	if s.w != nil {
+		s.w.Flush()
+		if err := s.w.Error(); err != nil {
+			return err
+		}
+	}
+	if s.f != nil {
+		return s.f.Close()
+	}
+	return nil
+}
+
+func (s *CSVDirSink) Close() error { return nil }
+
+func csvCell(v any) string {
+	switch x := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return x
+	case bool:
+		if x {
+			return "true"
+		}
+		return "false"
+	default:
+		return fmt.Sprint(x)
+	}
 }
 
 // --- NDJSON sink: one JSON-Lines file per entity, the document-store path. --
