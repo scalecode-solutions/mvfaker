@@ -173,6 +173,11 @@ currencies, capitals, continents): `country`, `country.code`, `country.code3`,
 Network: `ipv4` (public), `ipv4.private` (RFC 1918), `ipv6` (canonical RFC 5952,
 with `::` compression), `mac`.
 
+Payments — `creditcard` (Luhn-valid), `creditcard.number`, `creditcard.type`,
+`creditcard.visa/mastercard/amex/discover`, `creditcard.cvv`, `creditcard.expiry`.
+Coherent: `number` and `cvv` with `from = "type"` match the scheme (Amex → 15
+digits + 4-digit CVV; Visa/MC/Discover → 16 + 3). Fake test numbers, never real.
+
 Also: `internet.email`, `date`, `datetime`, `money`/`price`, `number`, `bool`,
 `uuid`, `lorem.word(s)`.
 
