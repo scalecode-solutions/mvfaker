@@ -33,6 +33,16 @@ func Build(name string, p Params) (MakeFn, error) {
 	return b(p)
 }
 
+// MustBuild is Build that panics on error — for generated code where the config
+// was already validated at generation time.
+func MustBuild(name string, p Params) MakeFn {
+	mk, err := Build(name, p)
+	if err != nil {
+		panic(err)
+	}
+	return mk
+}
+
 // Names lists registered builders, sorted.
 func Names() []string {
 	out := make([]string, 0, len(registry))

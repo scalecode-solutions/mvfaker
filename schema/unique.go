@@ -11,7 +11,9 @@ import "strings"
 //     no suffix. The base numeric value is replaced (documented behaviour).
 //   - string fields → the base value plus a compact index-derived tag, woven in
 //     before '@' for emails so the result stays well-formed and still coherent.
-func makeUnique(v any, idx, count int, seed uint64, entity, field string) any {
+//
+// UniqueValue is exported so generated code shares the interpreter's logic.
+func UniqueValue(v any, idx, count int, seed uint64, entity, field string) any {
 	key := hashStr(entity+"."+field) ^ seed ^ 0x9E3779B97F4A7C15
 	switch x := v.(type) {
 	case int:

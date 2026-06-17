@@ -10,6 +10,7 @@ mvfaker --seed --sql example.hcl    # dataset → SQL INSERTs
 mvfaker --seed --copy example.hcl   # dataset → Postgres COPY (fast bulk load)
 mvfaker --prop                 # run registered property rules, shrink failures
 mvfaker --prop demo.no-big     # …or one named rule
+mvfaker --gen -pkg fixtures example.hcl > fixtures.go  # compile to Go (~11× faster seeding)
 ```
 
 Register property rules in code (the registry seam):

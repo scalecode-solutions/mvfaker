@@ -11,6 +11,7 @@ import (
 	"os"
 
 	mvfaker "github.com/scalecode-solutions/mvfaker"
+	"github.com/scalecode-solutions/mvfaker/codegen"
 	"github.com/scalecode-solutions/mvfaker/gen"
 	"github.com/scalecode-solutions/mvfaker/mock"
 	"github.com/scalecode-solutions/mvfaker/schema"
@@ -45,6 +46,8 @@ func main() {
 		mockF  = flag.Bool("mock", false, "emit realistic records (random seed)")
 		seed   = flag.Bool("seed", false, "emit a full dataset to a sink")
 		prop   = flag.Bool("prop", false, "run property tests with shrinking (optionally name a rule)")
+		genGo  = flag.Bool("gen", false, "compile the config to standalone Go (scale path)")
+		pkg    = flag.String("pkg", "fixtures", "gen: package name for the emitted Go")
 		n      = flag.Int("n", 5, "record count")
 		runs   = flag.Int("runs", 1000, "prop: cases to try per rule")
 		entity = flag.String("entity", "", "entity to emit (default: first in config)")
@@ -75,6 +78,10 @@ func main() {
 	}
 
 	switch {
+	case *genGo:
+		if err := codegen.Emit(mustPlan(), *pkg, w); err != nil {
+			die(err)
+		}
 	case *prop:
 		runProp(w, flag.Args(), *seedV, *runs)
 	case *seed:

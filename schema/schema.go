@@ -110,7 +110,7 @@ func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, re
 		}
 		val := f.make(dep).Generate(s.Split())
 		if f.Unique {
-			val = makeUnique(val, id, count, seed, e.Name, f.Name)
+			val = UniqueValue(val, id, count, seed, e.Name, f.Name)
 		}
 		rec.Set(f.Name, val)
 	}

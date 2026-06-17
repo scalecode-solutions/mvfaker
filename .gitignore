@@ -1,3 +1,4 @@
 /mvfaker
 *.out
 *.test
+_demo/

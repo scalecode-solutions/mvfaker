@@ -7,22 +7,31 @@ import (
 	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
-// refResolver returns a deterministic FK for row ix of the given entity. Because
-// ids are dense 0..count-1, a foreign key is just a positional draw into the
-// target's row space — no pool needs to be materialized, so seeding stays
-// parallel and order-independent.
+// RowSource is the canonical entropy address for one row. Both the interpreter
+// and generated code call it, so their values are identical by construction.
+func RowSource(seed uint64, entity string, id int) gen.Source {
+	return gen.At(seed, hashStr(entity), uint64(id))
+}
+
+// RefIndex resolves a foreign key: a positional draw into the target's dense row
+// space [0,targetCount). No pool is materialized, so it stays parallel and
+// order-independent. Exposed so generated code shares the interpreter's logic.
+func RefIndex(seed uint64, entity string, id int, ref string, targetCount int) int {
+	if targetCount <= 0 {
+		return 0
+	}
+	rs := gen.At(seed, hashStr(entity), uint64(id), hashStr(ref))
+	return int(rs.Draw(uint64(targetCount)))
+}
+
+// refResolver returns a deterministic FK resolver for row ix of the given entity.
 func (p *Plan) refResolver(seed uint64, entity string, ix int) func(ref string) any {
 	return func(ref string) any {
 		tname := ref
 		if k := strings.IndexByte(ref, '.'); k >= 0 {
 			tname = ref[:k]
 		}
-		tc := p.Counts[tname]
-		if tc <= 0 {
-			return 0
-		}
-		rs := gen.At(seed, hashStr(entity), uint64(ix), hashStr(ref))
-		return int(rs.Draw(uint64(tc)))
+		return RefIndex(seed, entity, ix, ref, p.Counts[tname])
 	}
 }
 
@@ -34,7 +43,7 @@ func (p *Plan) Generate(entity string, seed uint64, n int) ([]*Record, error) {
 	}
 	out := make([]*Record, n)
 	for i := 0; i < n; i++ {
-		src := gen.At(seed, hashStr(entity), uint64(i))
+		src := RowSource(seed, entity, i)
 		out[i] = p.genRecord(e, src, i, n, seed, p.refResolver(seed, entity, i))
 	}
 	return out, nil
@@ -46,7 +55,7 @@ func (p *Plan) One(entity string, seed uint64, id, count int) (*Record, error) {
 	if e == nil {
 		return nil, fmt.Errorf("unknown entity %q", entity)
 	}
-	src := gen.At(seed, hashStr(entity), uint64(id))
+	src := RowSource(seed, entity, id)
 	return p.genRecord(e, src, id, count, seed, p.refResolver(seed, entity, id)), nil
 }
 
@@ -62,7 +71,7 @@ func (p *Plan) Seed(seed uint64, sink Sink) error {
 			return err
 		}
 		for i := 0; i < n; i++ {
-			src := gen.At(seed, hashStr(name), uint64(i))
+			src := RowSource(seed, name, i)
 			rec := p.genRecord(e, src, i, n, seed, p.refResolver(seed, name, i))
 			if err := sink.Write(rec); err != nil {
 				return err

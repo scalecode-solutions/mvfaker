@@ -151,14 +151,25 @@ Config stays declarative; anything custom is written in code, named via
 closure so rules of any shape share one registry, and `--prop [name]` runs them
 through the recording source + shrinker. All four modes share one recipe set.
 
-## 9. Open questions / deferred
+## 9. Codegen scale path (`codegen/`, `--gen`)
 
-- Weighted/Zipf realism for names; coherent address/phone/locale.
-- Counter-based RNG choice; codegen path for extreme-scale seeding.
-- More sinks (CSV, Postgres `COPY`), `--mock --serve` HTTP mode.
-- Uniqueness for types beyond int/string; `unique` across a composite of fields.
+Because generators are pure descriptions, a Plan compiles to standalone Go:
+typed structs + per-entity `Gen`/`Seed` functions + `SeedAll`. It does NOT
+reimplement generators — emitted code calls the same exposed seams the
+interpreter uses (`data.MustBuild`, `schema.RowSource`/`RefIndex`/`UniqueValue`)
+in the same source-addressing order, so output is identical **by construction**
+(verified byte-for-byte at 1.5M rows). Removing the `map[string]any` record and
+reflection-formatting per row makes it ~11× faster than the interpreter. This is
+the purity invariant paying off again: a pure description can be compiled; a
+function-bag cannot.
 
-## 10. Build order (done)
+## 10. Open questions / deferred
+
+- Counter-based RNG choice for the positional source.
+- Deeper codegen: inline the generators (drop the `any` boxing) for more speed.
+- More sinks (CSV); more locales; `unique` across a composite of fields.
+
+## 11. Build order (done)
 
 1. Entropy + Value core ✓  2. Recording source + shrinker ✓
 3. Registry + built-ins ✓  4. Dataset + sinks ✓  5. HCL front-end ✓
