@@ -1,0 +1,11 @@
+{
+"code": "fr-FR",
+"name": "French (France)",
+"country": "FR",
+"firstNames": ["Jean","Pierre","Michel","Philippe","Nicolas","Marie","Nathalie","Isabelle","Sylvie","Catherine","Lucas","Hugo","Léa","Emma","Thomas","Julien","Camille","Manon","Antoine","Chloé"],
+"lastNames": ["Martin","Bernard","Thomas","Petit","Robert","Richard","Durand","Dubois","Moreau","Laurent","Simon","Michel","Lefebvre","Leroy","Roux","David","Bertrand","Morel","Fournier","Girard"],
+"cities": ["Paris","Marseille","Lyon","Toulouse","Nice","Nantes","Strasbourg","Montpellier","Bordeaux","Lille"],
+"regions": ["Île-de-France","Provence-Alpes-Côte d'Azur","Auvergne-Rhône-Alpes","Occitanie","Nouvelle-Aquitaine","Grand Est"],
+"streets": ["Rue de la République","Avenue des Champs-Élysées","Rue Victor Hugo","Boulevard Saint-Germain"],
+"postalFormat": "#####"
+}

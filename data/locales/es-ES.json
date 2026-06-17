@@ -1,0 +1,11 @@
+{
+"code": "es-ES",
+"name": "Spanish (Spain)",
+"country": "ES",
+"firstNames": ["Antonio","José","Manuel","Francisco","David","Juan","Javier","María","Carmen","Ana","Isabel","Laura","Daniel","Carlos","Lucía","Marta","Pablo","Sergio","Elena","Sara"],
+"lastNames": ["García","Fernández","González","Rodríguez","López","Martínez","Sánchez","Pérez","Gómez","Martín","Jiménez","Ruiz","Hernández","Díaz","Moreno","Álvarez","Romero","Alonso","Gutiérrez","Navarro"],
+"cities": ["Madrid","Barcelona","Valencia","Sevilla","Zaragoza","Málaga","Murcia","Bilbao","Alicante","Granada"],
+"regions": ["Madrid","Cataluña","Andalucía","Comunidad Valenciana","Galicia","País Vasco","Canarias"],
+"streets": ["Calle Mayor","Calle Real","Avenida de España","Gran Vía","Calle del Sol"],
+"postalFormat": "#####"
+}

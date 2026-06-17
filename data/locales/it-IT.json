@@ -1,0 +1,11 @@
+{
+"code": "it-IT",
+"name": "Italian (Italy)",
+"country": "IT",
+"firstNames": ["Giuseppe","Giovanni","Antonio","Mario","Luigi","Francesco","Maria","Anna","Giulia","Sofia","Francesca","Marco","Alessandro","Lorenzo","Matteo","Chiara","Sara","Elena","Davide","Andrea"],
+"lastNames": ["Rossi","Russo","Ferrari","Esposito","Bianchi","Romano","Colombo","Ricci","Marino","Greco","Bruno","Gallo","Conti","De Luca","Mancini","Costa","Giordano","Rizzo","Lombardi","Moretti"],
+"cities": ["Roma","Milano","Napoli","Torino","Palermo","Genova","Bologna","Firenze","Bari","Venezia"],
+"regions": ["Lazio","Lombardia","Campania","Piemonte","Sicilia","Veneto","Emilia-Romagna","Toscana"],
+"streets": ["Via Roma","Via Garibaldi","Corso Italia","Via Marconi","Via Dante"],
+"postalFormat": "#####"
+}

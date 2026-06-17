@@ -1,0 +1,11 @@
+{
+"code": "es-MX",
+"name": "Spanish (Mexico)",
+"country": "MX",
+"firstNames": ["José","Juan","Miguel","Luis","Carlos","Jesús","María","Guadalupe","Juana","Alejandro","Fernando","Ricardo","Verónica","Patricia","Rosa","Diego","Sofía","Valeria"],
+"lastNames": ["Hernández","García","Martínez","López","González","Pérez","Rodríguez","Sánchez","Ramírez","Cruz","Flores","Gómez","Morales","Vázquez","Reyes","Torres","Díaz","Jiménez"],
+"cities": ["Ciudad de México","Guadalajara","Monterrey","Puebla","Tijuana","León","Juárez","Zapopan","Mérida","Cancún"],
+"regions": ["Jalisco","Nuevo León","Puebla","Ciudad de México","Veracruz","Guanajuato","Yucatán"],
+"streets": ["Avenida Juárez","Calle Hidalgo","Avenida Reforma","Calle Morelos"],
+"postalFormat": "#####"
+}

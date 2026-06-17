@@ -19,3 +19,13 @@ carries the licenses below.
 
 Country/ISO codes, calling codes and currency codes are factual data and not
 themselves subject to copyright.
+
+## Locale files (`data/locales/`)
+
+- **en-US** is built from the census/SSA sources above (real frequency ranking).
+- **Other locales** (`es-ES`, `es-MX`, `fr-FR`, `it-IT`, `de-DE`, `en-GB`,
+  `ja-JP`, `pt-BR`) are **bootstrapped from common-knowledge public facts** —
+  widely-documented top surnames, common given names, major cities, regions and
+  postal formats. The data is real, but frequency *ordering* is approximate
+  (not yet sourced from each country's census). **Native speakers: corrections
+  and real frequency data are very welcome** — see [CONTRIBUTING.md](CONTRIBUTING.md).

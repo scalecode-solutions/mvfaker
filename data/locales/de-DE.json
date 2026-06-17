@@ -2,8 +2,10 @@
 "code": "de-DE",
 "name": "German (Germany)",
 "country": "DE",
-"cities": ["Berlin", "Munich", "Hamburg", "Cologne", "Frankfurt", "Stuttgart", "Dusseldorf"],
-"regions": ["BY", "NW", "BE", "HH", "HE", "BW"],
-"streets": ["Hauptstrasse", "Bahnhofstrasse", "Schulstrasse", "Gartenweg"],
+"firstNames": ["Thomas","Michael","Andreas","Wolfgang","Stefan","Klaus","Maria","Ursula","Monika","Petra","Sabine","Lukas","Leon","Hannah","Emma","Jonas","Felix","Lena","Marie","Paul"],
+"lastNames": ["Müller","Schmidt","Schneider","Fischer","Weber","Meyer","Wagner","Becker","Schulz","Hoffmann","Schäfer","Koch","Bauer","Richter","Klein","Wolf","Schröder","Neumann","Schwarz","Zimmermann"],
+"cities": ["Berlin","Munich","Hamburg","Cologne","Frankfurt","Stuttgart","Düsseldorf","Leipzig"],
+"regions": ["Bayern","Nordrhein-Westfalen","Berlin","Hamburg","Hessen","Baden-Württemberg"],
+"streets": ["Hauptstraße","Bahnhofstraße","Schulstraße","Gartenweg","Kirchgasse"],
 "postalFormat": "#####"
 }
