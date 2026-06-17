@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: forum
+      POSTGRES_PASSWORD: forum
+      POSTGRES_DB: forum
+    volumes:
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forum -d forum"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  seed:
+    build:
+      context: ..
+      dockerfile: integration/seed/Dockerfile
+    environment:
+      DATABASE_URL: postgres://forum:forum@db:5432/forum?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://forum:forum@db:5432/forum?sslmode=disable
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully

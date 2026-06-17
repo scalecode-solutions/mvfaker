@@ -1,0 +1,6 @@
+.git
+_demo
+_ex
+*.test
+*.out
+/mvfaker

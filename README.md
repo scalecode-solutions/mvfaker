@@ -13,17 +13,106 @@ mvfaker --prop demo.no-big     # …or one named rule
 mvfaker --gen -pkg fixtures example.hcl > fixtures.go  # compile to Go (~11× faster seeding)
 ```
 
-Register property rules in code (the registry seam):
+## Usage
+
+### Install
+
+```bash
+go build -o mvfaker ./cmd/mvfaker      # or: go install ./cmd/mvfaker
+```
+
+### 1. Write a config (`example.hcl`)
+
+Entities, fields, and how they relate. Fields cohere via `from`; foreign keys via
+`ref`; dataset sizes via `counts`.
+
+```hcl
+entity "users" {
+  field "name"  { gen = "name.full" }
+  field "email" {
+    gen    = "internet.email"
+    from   = "name"          # email derives from the name
+    unique = true            # guaranteed unique, no mutable set
+  }
+  field "country" { gen = "address.country" }
+  field "city"    { gen = "address.city", from = "country" }  # city matches country
+}
+
+entity "posts" {
+  field "author_id" { ref = "users.id" }   # FK into users
+  field "title"     { gen = "lorem.words", n = 5 }
+}
+
+dataset "demo" {
+  counts = { users = 1000, posts = 5000 }
+}
+```
+
+### 2. Run a mode
+
+```bash
+mvfaker --fixt -n 5 example.hcl                # a few records → JSON (eyeball / fixtures)
+mvfaker --seed --copy example.hcl > seed.sql   # full dataset → Postgres COPY
+mvfaker --mock --serve :8080 example.hcl       # fake API: curl localhost:8080/users/3
+mvfaker --gen -pkg fixtures example.hcl > fixtures.go   # compile to Go (~11× faster seeding)
+```
+
+Load a seed into Postgres: `psql mydb -f seed.sql`. (See [`integration/`](integration/)
+for a full Dockerized Go-backend-+-Postgres example seeded entirely by mvfaker.)
+
+### 3. …or use it as a Go library
+
+Fill a struct from tags (untagged fields are inferred):
+
+```go
+type User struct {
+    Name  string `fake:"name.full"`
+    Email string `fake:"internet.email,from=Name"` // coherence
+    Age   int    `fake:"number,min=18,max=65"`
+}
+var u User
+mvfaker.FillAt(&u, 42)   // deterministic; mvfaker.Fill(&u) for random
+```
+
+Property-test in plain code (drop into a `_test.go`):
+
+```go
+res := gen.Check(1, 1000, gen.List(8, gen.IntRange(0, 1000)), func(xs []int) bool {
+    for _, x := range xs { if x >= 900 { return false } }
+    return true
+})
+// res.Value → [900]  (the shrunk counterexample)
+```
+
+Or register named rules so `--prop` can run them:
 
 ```go
 mvfaker.RegisterRule("no-big",
-    gen.Slice(gen.IntRange(0, 8), gen.IntRange(0, 1000)),
+    gen.List(8, gen.IntRange(0, 1000)),
     func(xs []int) bool {
         for _, x := range xs { if x >= 900 { return false } }
         return true
     })
-// --prop shrinks a failure to the simplest case, e.g. [900]
 ```
+
+### Importing it from another (private) project
+
+The repo is private, so tell Go not to use the public proxy:
+
+```bash
+export GOPRIVATE=github.com/scalecode-solutions/*
+go get github.com/scalecode-solutions/mvfaker
+```
+
+### Which mode for what
+
+| You want… | Use |
+|---|---|
+| A few records to look at / test fixtures | `--fixt` or `mvfaker.Fill(&struct)` |
+| A fake API for frontend dev | `--mock --serve :8080` |
+| Fill a database | `--seed --copy` → `psql -f` |
+| Find edge-case bugs in your code | `gen.Check(...)` in a test, or `--prop` |
+| Seed *millions* of rows fast | `--gen` once, call the generated `SeedAll()` |
 
 ## Why it's different
 
@@ -79,8 +168,13 @@ other names, e.g. `date` takes `min`/`max` years.)
 ## Layout
 
 ```
-gen/      entropy (Source) + pure Generator[T] + combinators + shrinker
-data/     built-in generators and the name→registry
-schema/   entities, FK runner, sinks (JSON/SQL), HCL front-end
-cmd/      the CLI
+gen/          entropy (Source) + pure Generator[T] + combinators + tree shrinker
+data/         built-in generators, locales, and the name→registry
+schema/       entities, FK runner, uniqueness, sinks (JSON/SQL/COPY), HCL front-end
+mock/         --mock --serve HTTP stand-in API
+codegen/      --gen: compile a config to standalone Go (scale path)
+fill.go       struct-tag front-end (mvfaker.Fill / Struct[T])
+rule.go       property-rule registry
+cmd/mvfaker/  the CLI (--fixt/--mock/--seed/--prop/--gen)
+integration/  Dockerized Go backend + Postgres, seeded by mvfaker
 ```
