@@ -6,9 +6,11 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /mvfaker ./cmd/mvfaker
+RUN CGO_ENABLED=0 go build -o /embedded ./examples/embedded
 
 FROM mongo:7
 COPY --from=build /mvfaker /usr/local/bin/mvfaker
+COPY --from=build /embedded /usr/local/bin/embedded
 COPY integration/mongo/seed/forum.hcl /forum.hcl
 COPY integration/mongo/seed/load.sh /usr/local/bin/load.sh
 RUN chmod +x /usr/local/bin/load.sh

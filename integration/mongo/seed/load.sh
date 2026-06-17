@@ -13,6 +13,10 @@ for c in users posts comments; do
   mongoimport --uri "$MONGO_URI" --collection "$c" --file "/out/$c.ndjson" --drop --numInsertionWorkers 4
 done
 
+echo ">> embedded: generating + importing 'articles' (author + comments inline)..."
+embedded 1000 > /out/articles.ndjson
+mongoimport --uri "$MONGO_URI" --collection articles --file /out/articles.ndjson --drop --numInsertionWorkers 4
+
 echo ">> indexes (unique email index would REJECT the import if any email collided)..."
 mongosh "$MONGO_URI" --quiet --eval '
   db.users.createIndex({ id: 1 }, { unique: true });

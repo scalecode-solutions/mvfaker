@@ -14,12 +14,19 @@ mongoimport --collection users --file /out/users.ndjson   →   MongoDB
 
 ```bash
 docker compose -f integration/mongo/docker-compose.yml up --build -d
-docker compose -f integration/mongo/docker-compose.yml logs seed
-docker compose -f integration/mongo/docker-compose.yml down -v   # tear down
+curl localhost:8081/stats
 ```
 
-The seed step generates NDJSON with mvfaker, `mongoimport`s each collection, then
-verifies with `mongosh`.
+Three services: **mongo**, a one-shot **seed** (mvfaker → NDJSON → `mongoimport`,
+plus the embedded `articles` collection), and a Go **api** on `:8081` using the
+official mongo driver.
+
+```bash
+curl localhost:8081/posts?limit=5        # REFERENCED: $lookup joins post → author
+curl localhost:8081/posts/681/comments   # comment → author, also via $lookup
+curl localhost:8081/articles/0           # EMBEDDED: author + comments inline, one query
+docker compose -f integration/mongo/docker-compose.yml down -v   # tear down
+```
 
 ## Relational → document
 
