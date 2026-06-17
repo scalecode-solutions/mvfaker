@@ -56,7 +56,7 @@ func main() {
 		sql        = flag.Bool("sql", false, "seed: emit SQL INSERTs instead of JSON")
 		copyF      = flag.Bool("copy", false, "seed: emit Postgres COPY (fast bulk load)")
 		serve      = flag.String("serve", "", "mock: serve HTTP on this address, e.g. :8080")
-		check      = flag.Bool("check", false, "seed: validate config columns against --schema before seeding")
+		check      = flag.Bool("check", false, "verify config columns against --schema and exit; emits no data")
 		schemaPath = flag.String("schema", "", "check: path to a schema.sql to validate against")
 		dryRun     = flag.Bool("dryrun", false, "seed: print what would be generated; emit no data")
 		out        = flag.String("o", "", "output file (default stdout)")
@@ -88,13 +88,11 @@ func main() {
 		}
 	case *prop:
 		runProp(w, flag.Args(), *seedV, *runs)
-	case *seed, *check, *dryRun:
+	case *check:
+		// A standalone verified stage: validate and exit, writing no data.
+		runCheck(w, mustPlan(), *schemaPath)
+	case *seed, *dryRun:
 		p := mustPlan()
-		if *check {
-			if err := runCheck(p, *schemaPath); err != nil {
-				die(err)
-			}
-		}
 		if *dryRun {
 			runDryRun(w, p)
 			return
@@ -147,17 +145,17 @@ func runEmit(w io.Writer, p *schema.Plan, entity string, seed uint64, n int) {
 	fmt.Fprintln(w, string(b))
 }
 
-// runCheck validates the config's emitted columns against a schema.sql. All
-// output goes to stderr so a clean COPY stream can still flow to stdout when
-// --check precedes a real seed. Returns an error (→ exit 1, no data emitted) on
-// any mismatch.
-func runCheck(p *schema.Plan, schemaPath string) error {
+// runCheck is a standalone verified stage: it validates the config's emitted
+// columns against a schema.sql and exits, writing no data ever. Exit 0 when
+// everything matches, exit 1 on any mismatch — so it drops into CI or a deploy
+// gate as "is this config safe to seed?" without side effects.
+func runCheck(w io.Writer, p *schema.Plan, schemaPath string) {
 	if schemaPath == "" {
-		return fmt.Errorf("--check requires --schema <file.sql>")
+		die(fmt.Errorf("--check requires --schema <file.sql>"))
 	}
 	ddl, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return err
+		die(err)
 	}
 	tables := schema.ParseSQLSchema(string(ddl))
 	issues := p.CheckSchema(tables)
@@ -170,7 +168,9 @@ func runCheck(p *schema.Plan, schemaPath string) error {
 			errCount++
 		}
 	}
+	total := 0
 	for _, name := range p.Order {
+		total += p.Counts[name]
 		es := byEntity[name]
 		hasErr := false
 		for _, is := range es {
@@ -178,24 +178,24 @@ func runCheck(p *schema.Plan, schemaPath string) error {
 				hasErr = true
 			}
 		}
-		if !hasErr {
-			fmt.Fprintf(os.Stderr, "  ✓ %s\n", name)
-		} else {
-			fmt.Fprintf(os.Stderr, "  ✗ %s\n", name)
+		mark := "✓"
+		if hasErr {
+			mark = "✗"
 		}
+		fmt.Fprintf(w, "  %s %s\n", mark, name)
 		for _, is := range es {
-			mark := "•"
+			bullet := "•"
 			if is.Level == "error" {
-				mark = "✗"
+				bullet = "✗"
 			}
-			fmt.Fprintf(os.Stderr, "      %s %s\n", mark, is.Msg)
+			fmt.Fprintf(w, "      %s %s\n", bullet, is.Msg)
 		}
 	}
 	if errCount > 0 {
-		return fmt.Errorf("schema check failed: %d mismatch(es) — fix the config before seeding", errCount)
+		fmt.Fprintf(w, "\nschema check FAILED: %d mismatch(es). Nothing written.\n", errCount)
+		os.Exit(1)
 	}
-	fmt.Fprintln(os.Stderr, "  schema check passed.")
-	return nil
+	fmt.Fprintf(w, "\nschema check passed: %d entities, ~%d rows would seed. Nothing written.\n", len(p.Order), total)
 }
 
 // runDryRun prints what would be generated, without emitting any data.

@@ -7,8 +7,8 @@
 #   3. load       — generate + stream COPY into Postgres.
 set -e
 
-echo ">> pre-flight: validating config against schema..."
-mvfaker --seed --check --schema /schema.sql --dryrun /forum.hcl
+echo ">> pre-flight: verifying config against schema (verified stage, writes nothing)..."
+mvfaker --check --schema /schema.sql /forum.hcl
 
 echo ">> backup: pg_dump current database before loading..."
 pg_dump "$DATABASE_URL" > /backup.sql
