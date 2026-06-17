@@ -58,8 +58,8 @@ entity "comments" {
 
 dataset "forum" {
   counts = {
-    users    = 500
-    posts    = 2000
-    comments = 8000
+    users    = 5000
+    posts    = 20000
+    comments = 80000
   }
 }
