@@ -10,6 +10,7 @@ RUN CGO_ENABLED=0 go build -o /mvfaker ./cmd/mvfaker
 FROM postgres:16-alpine
 COPY --from=build /mvfaker /usr/local/bin/mvfaker
 COPY integration/seed/forum.hcl /forum.hcl
+COPY integration/db/schema.sql /schema.sql
 COPY integration/seed/load.sh /usr/local/bin/load.sh
 RUN chmod +x /usr/local/bin/load.sh
 ENTRYPOINT ["/usr/local/bin/load.sh"]
