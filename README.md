@@ -110,6 +110,36 @@ mvfaker.RegisterRule("no-big",
 go get github.com/scalecode-solutions/mvfaker@latest
 ```
 
+### Use it from an AI agent (MCP server)
+
+mvfaker ships a [Model Context Protocol](https://modelcontextprotocol.io) server
+(pure Go, no Node/npm) so an agent can discover and drive it at inference time —
+no waiting to be in the model's training data.
+
+```bash
+go install github.com/scalecode-solutions/mvfaker/cmd/mvfaker-mcp@latest
+```
+
+Register it (Claude Code):
+
+```bash
+claude mcp add mvfaker mvfaker-mcp
+```
+
+…or in an MCP `config` / `.mcp.json`:
+
+```json
+{ "mcpServers": { "mvfaker": { "command": "mvfaker-mcp" } } }
+```
+
+Tools exposed:
+
+| Tool | What it does |
+|---|---|
+| `list_generators` | the generator catalog (so the agent knows what's available) |
+| `list_locales` | available locale codes |
+| `generate_dataset` | turn a JSON dataset spec (entities → fields with `gen`/`from`/`ref`/`unique`) into data (`json`/`sql`/`copy`) — coherent and referentially valid by construction |
+
 ### Which mode for what
 
 | You want… | Use |
@@ -210,7 +240,8 @@ mock/         --mock --serve HTTP stand-in API
 codegen/      --gen: compile a config to standalone Go (scale path)
 fill.go       struct-tag front-end (mvfaker.Fill / Struct[T])
 rule.go       property-rule registry
-cmd/mvfaker/  the CLI (--fixt/--mock/--seed/--prop/--gen/--check)
+cmd/mvfaker/      the CLI (--fixt/--mock/--seed/--prop/--gen/--check)
+cmd/mvfaker-mcp/  MCP server (Go) — drive mvfaker from an AI agent
 integration/  showcase: same config → Postgres, SQLite, MySQL/CSV, MongoDB
 examples/     code-built plan + embedded-document generation
 ```
