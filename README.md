@@ -1,5 +1,9 @@
 # mvfaker
 
+[![CI](https://github.com/scalecode-solutions/mvfaker/actions/workflows/ci.yml/badge.svg)](https://github.com/scalecode-solutions/mvfaker/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/scalecode-solutions/mvfaker.svg)](https://pkg.go.dev/github.com/scalecode-solutions/mvfaker)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 One fake-data engine, four front doors — driven by a shared set of recipes.
 
 ```
@@ -163,9 +167,10 @@ field, then `from = "country"` on `city`/`postal`/`phone` and they match it.
 (Reserved attribute names: `gen`, `from`, `ref`, `unique` — generator params use
 other names, e.g. `date` takes `min`/`max` years.)
 
-## Status
+## Status & license
 
-`v0` — internal, API and seeded output not yet frozen. Rough edges welcome.
+`v0` — API and seeded output not yet frozen. Rough edges welcome.
+Licensed under the [MIT License](LICENSE).
 
 ## Layout
 
