@@ -33,9 +33,39 @@ keys, so:
 - A **unique index on `email`** plays the role Postgres's `UNIQUE` constraint
   played: building it would fail if mvfaker emitted a duplicate. It doesn't.
 
-(If you wanted *embedded* documents instead — a post with its comments nested —
-mvfaker's struct-tag front-end (`mvfaker.Fill` / `Struct[T]`) produces nested
-JSON directly, which is more idiomatic Mongo than the flat relational shape.)
+## Both modeling styles (because real Mongo apps use both)
+
+Mongo schemas mix two strategies, and mvfaker produces both:
+
+| Style | When | mvfaker path | This demo |
+|---|---|---|---|
+| **Referenced** | shared / unbounded data (the author, joined with `$lookup`) | relational `Plan` + `--ndjson` | `users` / `posts` / `comments` |
+| **Embedded** | read-together / bounded data (a post's comments, inline) | struct-tag `Fill` (nested struct = embedded doc) | `articles` |
+
+The embedded variant lives in [`examples/embedded`](../../examples/embedded):
+
+```bash
+go run ./examples/embedded 1000 > articles.ndjson   # author + comments nested inline
+mongoimport --collection articles --file articles.ndjson
+```
+
+The payoff is the read. Embedded — one query, no join:
+
+```js
+db.articles.findOne({ id: 0 })   // → post + author + comments, all in one document
+```
+
+Referenced — `$lookup` across collections for the same shape:
+
+```js
+db.posts.aggregate([
+  { $match: { id: 0 } },
+  { $lookup: { from: "users",    localField: "author_id", foreignField: "id",      as: "author" } },
+  { $lookup: { from: "comments", localField: "id",        foreignField: "post_id", as: "comments" } },
+])
+```
+
+Same generator, both shapes — embed what you read together, reference what you share.
 
 ## Same config, three databases
 
