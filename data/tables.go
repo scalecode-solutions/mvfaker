@@ -3,17 +3,7 @@
 // gen package never imports this.
 package data
 
-var firstNames = []string{
-	"James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda",
-	"David", "Elizabeth", "William", "Barbara", "Richard", "Susan", "Joseph", "Jessica",
-	"Thomas", "Sarah", "Aisha", "Wei", "Yuki", "Omar", "Priya", "Diego", "Nina", "Kofi",
-}
-
-var lastNames = []string{
-	"Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-	"Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
-	"Nakamura", "Okafor", "Patel", "Khan", "Nguyen", "Silva", "Cohen", "Mwangi",
-}
+// firstNames and lastNames live in dataset_gen.go (US Census / SSA-derived).
 
 var domains = []string{
 	"example.com", "mail.com", "inbox.dev", "post.io", "corp.net", "acme.org",

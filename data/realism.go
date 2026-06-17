@@ -7,47 +7,51 @@ import (
 	"github.com/scalecode-solutions/mvfaker/gen"
 )
 
-// A place bundles internally-consistent locale data. Coherence across address
-// fields rides the existing `from` mechanism: pick a country, then city/region/
-// postal/phone derive from it — the same Bind pattern as email-from-name.
-type place struct {
-	country   string
+// The 249-country dataset (dataset_gen.go) is the authoritative locale reference:
+// name, ISO codes, calling code, currency, capital, continent. `details` is a
+// thin overlay of city/region/postal specifics for the countries we have richer
+// data for, keyed by ISO alpha-2; everything else falls back to the capital and
+// a generic postal format. Coherence rides the `from` mechanism: derive code /
+// calling code / city / currency from a chosen country.
+type detail struct {
 	cities    []string
 	regions   []string
 	postalFmt string // # = digit, @ = uppercase letter
-	phoneCC   string
-	phoneFmt  string
 }
 
-var places = []place{
-	{"USA", []string{"Springfield", "Austin", "Portland", "Denver", "Tampa"}, []string{"IL", "TX", "OR", "CO", "FL"}, "#####", "+1", "(###) ###-####"},
-	{"UK", []string{"London", "Manchester", "Bristol", "Leeds"}, []string{"England", "Scotland", "Wales"}, "@@## #@@", "+44", "## #### ####"},
-	{"Germany", []string{"Berlin", "Munich", "Hamburg", "Cologne"}, []string{"BY", "NW", "BE", "HH"}, "#####", "+49", "### #######"},
-	{"Japan", []string{"Tokyo", "Osaka", "Kyoto", "Nagoya"}, []string{"Kanto", "Kansai", "Chubu"}, "###-####", "+81", "##-####-####"},
-	{"Brazil", []string{"Sao Paulo", "Rio de Janeiro", "Salvador"}, []string{"SP", "RJ", "BA"}, "#####-###", "+55", "(##) #####-####"},
+var details = map[string]detail{
+	"US": {[]string{"Springfield", "Austin", "Portland", "Denver", "Tampa", "Chicago", "Seattle"}, []string{"IL", "TX", "OR", "CO", "FL", "WA"}, "#####"},
+	"GB": {[]string{"London", "Manchester", "Bristol", "Leeds"}, []string{"England", "Scotland", "Wales"}, "@@## #@@"},
+	"DE": {[]string{"Berlin", "Munich", "Hamburg", "Cologne"}, []string{"BY", "NW", "BE", "HH"}, "#####"},
+	"JP": {[]string{"Tokyo", "Osaka", "Kyoto", "Nagoya"}, []string{"Kanto", "Kansai", "Chubu"}, "###-####"},
+	"BR": {[]string{"Sao Paulo", "Rio de Janeiro", "Salvador"}, []string{"SP", "RJ", "BA"}, "#####-###"},
 }
 
 var streets = []string{"Oak St", "Maple Ave", "Main St", "Park Rd", "Cedar Ln", "Elm St", "Hill Rd"}
 
-func placeByCountry(name string) (place, bool) {
-	for _, p := range places {
-		if p.country == name {
-			return p, true
-		}
+var (
+	countryByName = map[string]Country{}
+	countryByA2   = map[string]Country{}
+)
+
+func init() {
+	for _, c := range countries {
+		countryByName[c.Name] = c
+		countryByA2[c.A2] = c
 	}
-	return place{}, false
 }
 
-// resolvePlace returns the place named by dep, or a random one when dep is empty.
-func resolvePlace(dep any, s gen.Source) place {
-	if c, ok := dep.(string); ok {
-		if p, found := placeByCountry(c); found {
-			return p
+// resolveCountry returns the country named by dep, or a random one if dep is empty.
+func resolveCountry(dep any, s gen.Source) Country {
+	if name, ok := dep.(string); ok {
+		if c, found := countryByName[name]; found {
+			return c
 		}
 	}
-	return places[s.Draw(uint64(len(places)))]
+	return countries[s.Draw(uint64(len(countries)))]
 }
 
+// expandFmt turns a pattern (# = digit, @ = uppercase letter) into a generator.
 func expandFmt(format string) gen.Generator[string] {
 	return gen.New(func(s gen.Source) string {
 		var b strings.Builder
@@ -66,7 +70,7 @@ func expandFmt(format string) gen.Generator[string] {
 }
 
 // zipfPick favors earlier entries (weight ~ 1/rank), so common names dominate —
-// realistic skew instead of uniform mush. Order tables most-common first.
+// realistic skew. The name tables are pre-sorted by census frequency.
 func zipfPick(xs []string) gen.Generator[string] {
 	cum := make([]float64, len(xs))
 	total := 0.0
@@ -90,63 +94,108 @@ func zipfPick(xs []string) gen.Generator[string] {
 	})
 }
 
+// cgen builds a from-country generator: derive a field from the chosen country.
+func cgen(f func(Country) string) MakeFn {
+	return func(dep any) gen.Generator[any] {
+		return gen.New(func(s gen.Source) any { return f(resolveCountry(dep, s)) })
+	}
+}
+
+func reg0(name string, mk MakeFn) {
+	Register(name, func(Params) (MakeFn, error) { return mk, nil })
+}
+
 func init() {
-	Register("address.country", func(p Params) (MakeFn, error) {
-		g := gen.New(func(s gen.Source) string { return places[s.Draw(uint64(len(places)))].country })
-		return func(any) gen.Generator[any] { return boxed(g) }, nil
+	reg0("country", cgen(func(c Country) string { return c.Name }))
+	reg0("country.code", cgen(func(c Country) string { return c.A2 }))
+	reg0("country.code3", cgen(func(c Country) string { return c.A3 }))
+	reg0("country.callingcode", cgen(func(c Country) string { return "+" + c.Dial }))
+	reg0("country.currency", cgen(func(c Country) string { return c.Currency }))
+	reg0("country.capital", cgen(func(c Country) string { return c.Capital }))
+	reg0("country.continent", cgen(func(c Country) string { return c.Continent }))
+	reg0("currency.code", cgen(func(c Country) string { return c.Currency }))
+	reg0("address.country", cgen(func(c Country) string { return c.Name }))
+
+	reg0("address.city", func(dep any) gen.Generator[any] {
+		return gen.New(func(s gen.Source) any {
+			c := resolveCountry(dep, s)
+			if d, ok := details[c.A2]; ok && len(d.cities) > 0 {
+				return d.cities[s.Draw(uint64(len(d.cities)))]
+			}
+			if c.Capital != "" {
+				return c.Capital
+			}
+			return "Springfield"
+		})
 	})
 
-	Register("address.city", func(p Params) (MakeFn, error) {
-		return func(dep any) gen.Generator[any] {
-			return gen.New(func(s gen.Source) any {
-				pl := resolvePlace(dep, s)
-				return pl.cities[s.Draw(uint64(len(pl.cities)))]
-			})
-		}, nil
+	reg0("address.region", func(dep any) gen.Generator[any] {
+		return gen.New(func(s gen.Source) any {
+			c := resolveCountry(dep, s)
+			if d, ok := details[c.A2]; ok && len(d.regions) > 0 {
+				return d.regions[s.Draw(uint64(len(d.regions)))]
+			}
+			return ""
+		})
 	})
 
-	Register("address.region", func(p Params) (MakeFn, error) {
-		return func(dep any) gen.Generator[any] {
-			return gen.New(func(s gen.Source) any {
-				pl := resolvePlace(dep, s)
-				return pl.regions[s.Draw(uint64(len(pl.regions)))]
-			})
-		}, nil
+	reg0("address.postal", func(dep any) gen.Generator[any] {
+		return gen.New(func(s gen.Source) any {
+			c := resolveCountry(dep, s)
+			f := "#####"
+			if d, ok := details[c.A2]; ok && d.postalFmt != "" {
+				f = d.postalFmt
+			}
+			return expandFmt(f).Generate(s.Split())
+		})
 	})
 
-	Register("address.postal", func(p Params) (MakeFn, error) {
-		return func(dep any) gen.Generator[any] {
-			return gen.New(func(s gen.Source) any {
-				pl := resolvePlace(dep, s)
-				return expandFmt(pl.postalFmt).Generate(s.Split())
-			})
-		}, nil
+	reg0("phone", func(dep any) gen.Generator[any] {
+		return gen.New(func(s gen.Source) any {
+			c := resolveCountry(dep, s)
+			dial := c.Dial
+			if dial == "" {
+				dial = "1"
+			}
+			return "+" + dial + " " + expandFmt("##########").Generate(s.Split())
+		})
 	})
 
-	Register("phone", func(p Params) (MakeFn, error) {
-		return func(dep any) gen.Generator[any] {
-			return gen.New(func(s gen.Source) any {
-				pl := resolvePlace(dep, s)
-				return pl.phoneCC + " " + expandFmt(pl.phoneFmt).Generate(s.Split())
-			})
-		}, nil
+	reg0("us.state", func(any) gen.Generator[any] {
+		return gen.New(func(s gen.Source) any { return usStates[s.Draw(uint64(len(usStates)))].Name })
+	})
+	reg0("us.state.code", func(dep any) gen.Generator[any] {
+		return gen.New(func(s gen.Source) any {
+			if name, ok := dep.(string); ok {
+				if ab, found := stateByName[name]; found {
+					return ab
+				}
+			}
+			return usStates[s.Draw(uint64(len(usStates)))].Abbr
+		})
 	})
 
-	Register("address.full", func(p Params) (MakeFn, error) {
-		g := gen.New(func(s gen.Source) string {
-			pl := places[s.Draw(uint64(len(places)))]
+	reg0("address.full", func(any) gen.Generator[any] {
+		return gen.New(func(s gen.Source) any {
+			c := countries[s.Draw(uint64(len(countries)))]
 			num := 100 + s.Draw(9900)
 			street := streets[s.Draw(uint64(len(streets)))]
-			city := pl.cities[s.Draw(uint64(len(pl.cities)))]
-			region := pl.regions[s.Draw(uint64(len(pl.regions)))]
-			postal := expandFmt(pl.postalFmt).Generate(s.Split())
-			return fmt.Sprintf("%d %s, %s, %s %s, %s", num, street, city, region, postal, pl.country)
+			city := c.Capital
+			f := "#####"
+			if d, ok := details[c.A2]; ok {
+				if len(d.cities) > 0 {
+					city = d.cities[s.Draw(uint64(len(d.cities)))]
+				}
+				if d.postalFmt != "" {
+					f = d.postalFmt
+				}
+			}
+			postal := expandFmt(f).Generate(s.Split())
+			return fmt.Sprintf("%d %s, %s %s, %s", num, street, city, postal, c.Name)
 		})
-		return func(any) gen.Generator[any] { return boxed(g) }, nil
 	})
 
-	// NB: year bounds are min/max, not from/to — `from` is reserved for the
-	// coherence dependency keyword.
+	// NB: year bounds are min/max, not from/to — `from` is reserved.
 	Register("date", func(p Params) (MakeFn, error) {
 		lo, hi := p.Int("min", 2000), p.Int("max", 2025)
 		span := hi - lo + 1
@@ -154,10 +203,7 @@ func init() {
 			span = 1
 		}
 		g := gen.New(func(s gen.Source) string {
-			y := lo + int(s.Draw(uint64(span)))
-			m := 1 + int(s.Draw(12))
-			d := 1 + int(s.Draw(28))
-			return fmt.Sprintf("%04d-%02d-%02d", y, m, d)
+			return fmt.Sprintf("%04d-%02d-%02d", lo+int(s.Draw(uint64(span))), 1+int(s.Draw(12)), 1+int(s.Draw(28)))
 		})
 		return func(any) gen.Generator[any] { return boxed(g) }, nil
 	})
@@ -169,9 +215,8 @@ func init() {
 			span = 1
 		}
 		g := gen.New(func(s gen.Source) string {
-			y := lo + int(s.Draw(uint64(span)))
 			return fmt.Sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ",
-				y, 1+int(s.Draw(12)), 1+int(s.Draw(28)),
+				lo+int(s.Draw(uint64(span))), 1+int(s.Draw(12)), 1+int(s.Draw(28)),
 				int(s.Draw(24)), int(s.Draw(60)), int(s.Draw(60)))
 		})
 		return func(any) gen.Generator[any] { return boxed(g) }, nil

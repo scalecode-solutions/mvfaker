@@ -160,12 +160,23 @@ See [DESIGN.md](DESIGN.md) for the full architecture.
 
 ## Generators
 
-`name.first/last/full` (Zipf-weighted), `internet.email`, `address.country/city/
-region/postal/full`, `phone`, `date`, `datetime`, `money`/`price`, `number`,
-`bool`, `uuid`, `lorem.word(s)`. Locale fields cohere via `from`: set a `country`
-field, then `from = "country"` on `city`/`postal`/`phone` and they match it.
-(Reserved attribute names: `gen`, `from`, `ref`, `unique` — generator params use
-other names, e.g. `date` takes `min`/`max` years.)
+Names — `name.first/last/full` — are drawn from **US Census surnames (top 1,000)
+and SSA first names (top 600), weighted by real frequency**, so common names
+dominate like they do in reality (~600k unique full names).
+
+Geography is backed by a **249-country dataset** (ISO codes, calling codes,
+currencies, capitals, continents): `country`, `country.code`, `country.code3`,
+`country.callingcode`, `country.currency`, `country.capital`, `country.continent`,
+`currency.code`, plus `address.city/region/postal/full`, `phone`, and US
+`us.state` / `us.state.code`.
+
+Also: `internet.email`, `date`, `datetime`, `money`/`price`, `number`, `bool`,
+`uuid`, `lorem.word(s)`.
+
+Everything coheres via `from`: set a `country` field, then `from = "country"` on
+`country.code` / `currency` / `city` / `phone` and they all match. (Reserved
+attribute names: `gen`, `from`, `ref`, `unique` — generator params use other
+names, e.g. `date` takes `min`/`max` years.) Data sources: [ATTRIBUTION.md](ATTRIBUTION.md).
 
 ## Status & license
 
