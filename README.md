@@ -60,7 +60,8 @@ mvfaker --gen -pkg fixtures example.hcl > fixtures.go   # compile to Go (~11× f
 ```
 
 Load a seed into Postgres: `psql mydb -f seed.sql`. (See [`integration/`](integration/)
-for a full Dockerized Go-backend-+-Postgres example seeded entirely by mvfaker.)
+for the full showcase — the same config seeded into **Postgres, SQLite, MySQL/CSV,
+and MongoDB**, with live Go API backends.)
 
 ### 3. …or use it as a Go library
 
@@ -177,6 +178,7 @@ mock/         --mock --serve HTTP stand-in API
 codegen/      --gen: compile a config to standalone Go (scale path)
 fill.go       struct-tag front-end (mvfaker.Fill / Struct[T])
 rule.go       property-rule registry
-cmd/mvfaker/  the CLI (--fixt/--mock/--seed/--prop/--gen)
-integration/  Dockerized Go backend + Postgres, seeded by mvfaker
+cmd/mvfaker/  the CLI (--fixt/--mock/--seed/--prop/--gen/--check)
+integration/  showcase: same config → Postgres, SQLite, MySQL/CSV, MongoDB
+examples/     code-built plan + embedded-document generation
 ```
