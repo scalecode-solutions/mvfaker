@@ -136,7 +136,11 @@ func emitGen(b *bytes.Buffer, p *schema.Plan, e *schema.Entity) {
 		b.WriteString("\t{\n")
 		fmt.Fprintf(b, "\t\tv := %s(%s).Generate(src.Split())\n", varName(e.Name, f.Name), dep)
 		if f.Unique {
-			fmt.Fprintf(b, "\t\tv = schema.UniqueValue(v, id, count, seed, %q, %q)\n", e.Name, f.Name)
+			if f.UniqueSep != nil {
+				fmt.Fprintf(b, "\t\tv = schema.UniqueValueSep(v, id, count, seed, %q, %q, %q)\n", e.Name, f.Name, *f.UniqueSep)
+			} else {
+				fmt.Fprintf(b, "\t\tv = schema.UniqueValue(v, id, count, seed, %q, %q)\n", e.Name, f.Name)
+			}
 		}
 		fmt.Fprintf(b, "\t\tr.%s = v.(%s)\n\t}\n", exportName(f.Name), fieldGoType(p, f))
 	}

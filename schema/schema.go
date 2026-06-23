@@ -28,6 +28,7 @@ type Field struct {
 	MaxLen    int     // truncate string values to this length (0 = no limit)
 	NullProb  float64 // probability in [0,1] the value is NULL instead
 	When      string  // condition on a sibling: "state == deactivated"; NULL unless it holds
+	UniqueSep *string // separator for a unique string suffix; nil = default (. / +@), "" = alnum-safe
 
 	make data.MakeFn // resolved from the registry
 }
@@ -160,7 +161,11 @@ func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, de
 			val = truncate(val, f.MaxLen)
 		}
 		if f.Unique {
-			val = UniqueValue(val, id, count, seed, e.Name, f.Name)
+			if f.UniqueSep != nil { // configurable separator (e.g. "" for strict ^[a-z0-9]+$ handles)
+				val = UniqueValueSep(val, id, count, seed, e.Name, f.Name, *f.UniqueSep)
+			} else {
+				val = UniqueValue(val, id, count, seed, e.Name, f.Name)
+			}
 		}
 		if f.When != "" && !evalWhen(f.When, rec) { // #8 conditional coherence
 			val = nil

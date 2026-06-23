@@ -226,6 +226,11 @@ lower(handle)`.
 no `id` column (composite-PK tables). Int- and UUID-keyed entities can coexist,
 and a `ref` to a table is automatically encoded as *that table's* id type.
 
+A unique **string** suffix uses `.` by default (and `+` before `@` for emails).
+For strict formats like a `^[a-z0-9]+$` handle, set `unique_sep = ""` (or
+`unique_style = "alnum"`) → `wilson5h`; the tag is fixed-width so uniqueness is
+still guaranteed. Any separator works (`unique_sep = "-"`, etc.).
+
 **Unique & composite refs** — `ref ... unique = true` gives a distinct target per
 row (1:1, e.g. `auth` ↔ `users`). For a join table, declare the two ref fields as
 a unique pair on the entity: `distinct_pair = ["conversation_id", "user_id"]` —

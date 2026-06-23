@@ -108,6 +108,14 @@ func decodeField(fb fieldBlock) (*Field, error) {
 			}
 		case "when":
 			f.When, _ = gv.(string)
+		case "unique_sep":
+			s, _ := gv.(string)
+			f.UniqueSep = &s
+		case "unique_style":
+			if st, _ := gv.(string); st == "alnum" {
+				empty := ""
+				f.UniqueSep = &empty
+			}
 		default:
 			f.Params[name] = gv
 		}

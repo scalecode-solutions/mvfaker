@@ -14,15 +14,16 @@ import (
 // FieldSpec is one field in a JSON dataset spec.
 type FieldSpec struct {
 	Name      string         `json:"name"`
-	Gen       string         `json:"gen,omitempty"`       // generator name (omit for ref)
-	From      string         `json:"from,omitempty"`      // coherence: derive from this field
-	Ref       string         `json:"ref,omitempty"`       // FK: "entity.id"
-	Unique    bool           `json:"unique,omitempty"`    // runner-enforced uniqueness
-	Transform string         `json:"transform,omitempty"` // lower|upper|slug|title
-	MaxLen    int            `json:"maxlen,omitempty"`    // truncate strings to length
-	NullProb  float64        `json:"null_prob,omitempty"` // probability the value is NULL
-	When      string         `json:"when,omitempty"`      // NULL unless condition holds, e.g. "state == deactivated"
-	Params    map[string]any `json:"params,omitempty"`    // generator params (min, max, n, locale…)
+	Gen       string         `json:"gen,omitempty"`        // generator name (omit for ref)
+	From      string         `json:"from,omitempty"`       // coherence: derive from this field
+	Ref       string         `json:"ref,omitempty"`        // FK: "entity.id"
+	Unique    bool           `json:"unique,omitempty"`     // runner-enforced uniqueness
+	Transform string         `json:"transform,omitempty"`  // lower|upper|slug|title
+	MaxLen    int            `json:"maxlen,omitempty"`     // truncate strings to length
+	NullProb  float64        `json:"null_prob,omitempty"`  // probability the value is NULL
+	When      string         `json:"when,omitempty"`       // NULL unless condition holds, e.g. "state == deactivated"
+	UniqueSep *string        `json:"unique_sep,omitempty"` // unique suffix separator ("" = alnum-safe handle)
+	Params    map[string]any `json:"params,omitempty"`     // generator params (min, max, n, locale…)
 }
 
 // EntitySpec is one entity (table/collection) in a JSON dataset spec.
@@ -54,7 +55,7 @@ func (s Spec) Plan() (*Plan, error) {
 			f := &Field{
 				Name: fs.Name, Gen: fs.Gen, From: fs.From, Ref: fs.Ref, Unique: fs.Unique,
 				Transform: fs.Transform, MaxLen: fs.MaxLen, NullProb: fs.NullProb, When: fs.When,
-				Params: data.Params{},
+				UniqueSep: fs.UniqueSep, Params: data.Params{},
 			}
 			for k, v := range fs.Params {
 				f.Params[k] = v

@@ -12,6 +12,44 @@ import "strings"
 //   - string fields → the base value plus a compact index-derived tag, woven in
 //     before '@' for emails so the result stays well-formed and still coherent.
 //
+// UniqueValueSep is UniqueValue with an explicit separator between the value and
+// the disambiguating tag — sep="" yields an alphanumeric handle (wilson5h) that
+// passes strict formats like ^[a-z0-9]+$. With no separator the tag is fixed-width
+// (zero-padded) so the value/tag boundary is unambiguous and uniqueness stays
+// guaranteed by construction. ints are unaffected (permuted).
+func UniqueValueSep(v any, idx, count int, seed uint64, entity, field, sep string) any {
+	key := hashStr(entity+"."+field) ^ seed ^ 0x9E3779B97F4A7C15
+	switch x := v.(type) {
+	case int:
+		return permuteIndex(idx, count, key)
+	case string:
+		p := permuteIndex(idx, count, key)
+		if sep == "" {
+			return x + base36Pad(p, base36Width(count)) // fixed width → still unique
+		}
+		return x + sep + base36(p)
+	default:
+		return v
+	}
+}
+
+func base36Width(n int) int {
+	w, m := 1, 36
+	for m < n {
+		m *= 36
+		w++
+	}
+	return w
+}
+
+func base36Pad(v, width int) string {
+	s := base36(v)
+	for len(s) < width {
+		s = "0" + s
+	}
+	return s
+}
+
 // UniqueValue is exported so generated code shares the interpreter's logic.
 func UniqueValue(v any, idx, count int, seed uint64, entity, field string) any {
 	key := hashStr(entity+"."+field) ^ seed ^ 0x9E3779B97F4A7C15
