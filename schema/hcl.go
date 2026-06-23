@@ -21,6 +21,7 @@ type configFile struct {
 
 type entityBlock struct {
 	Name   string       `hcl:"name,label"`
+	IDType string       `hcl:"id_type,optional"` // "int" (default) or "uuid"
 	Fields []fieldBlock `hcl:"field,block"`
 }
 
@@ -48,7 +49,7 @@ func LoadHCL(path string) (*Plan, error) {
 
 	p := &Plan{Entities: map[string]*Entity{}, Counts: map[string]int{}}
 	for _, eb := range cfg.Entities {
-		e := &Entity{Name: eb.Name}
+		e := &Entity{Name: eb.Name, IDType: eb.IDType}
 		for _, fb := range eb.Fields {
 			f, err := decodeField(fb)
 			if err != nil {

@@ -35,6 +35,7 @@ type Field struct {
 // Entity is a named record shape.
 type Entity struct {
 	Name   string
+	IDType string // "int" (default, the row index) or "uuid" (deterministic per row)
 	Fields []*Field
 }
 
@@ -109,21 +110,29 @@ const maxProjDepth = 8
 // genRecord builds one record. id is the row index; count is the entity's total
 // row count (the uniqueness domain). refFn resolves an "entity.id" FK. depth
 // tracks cross-entity projection recursion.
-func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, refFn func(ref string) any, depth int) *Record {
+func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, depth int) *Record {
 	rec := newRecord()
-	rec.Set("id", id)
+	rec.Set("id", encodeID(e.IDType, seed, e.Name, id)) // int index or deterministic UUID
 	if depth > maxProjDepth {
 		return rec
 	}
+	refIdx := map[string]int{} // ref field -> drawn target row index (for projection)
 	for _, f := range e.Fields {
 		if f.Ref != "" {
-			rec.Set(f.Name, refFn(f.Ref))
+			target := refTarget(f.Ref)
+			idx := RefIndex(seed, e.Name, id, f.Ref, p.Counts[target])
+			refIdx[f.Name] = idx
+			it := "int"
+			if te := p.Entities[target]; te != nil {
+				it = te.IDType
+			}
+			rec.Set(f.Name, encodeID(it, seed, target, idx)) // FK encoded as target's id type
 			continue
 		}
 		var dep any
 		if f.From != "" {
 			if local, target, ok := splitProjection(f.From); ok {
-				dep = p.projectField(e, rec, local, target, seed, depth) // #7 cross-entity
+				dep = p.projectField(e, refIdx, local, target, seed, depth) // #7 cross-entity
 			} else {
 				dep = rec.Get(f.From) // within-entity coherence
 			}
@@ -157,22 +166,48 @@ func splitProjection(from string) (local, target string, ok bool) {
 	return "", "", false
 }
 
+func refTarget(ref string) string {
+	if k := strings.IndexByte(ref, '.'); k >= 0 {
+		return ref[:k]
+	}
+	return ref
+}
+
+// encodeID renders a row index as its emitted primary key: the int index itself,
+// or a deterministic UUID for that (seed, entity, index).
+func encodeID(idType string, seed uint64, entity string, index int) any {
+	if idType == "uuid" {
+		return deterministicUUID(seed, entity, index)
+	}
+	return index
+}
+
+// deterministicUUID derives a stable RFC 4122 v4 UUID from (seed, entity, index),
+// so an entity's id and any FK to it agree, and re-runs are reproducible.
+func deterministicUUID(seed uint64, entity string, index int) string {
+	src := gen.At(seed, hashStr(entity), uint64(index), 0x7551d) // distinct salt path
+	var b [16]byte
+	for i := range b {
+		b[i] = byte(src.Draw(256))
+	}
+	b[6] = (b[6] & 0x0f) | 0x40 // version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // variant 10
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
 // projectField re-derives the row referenced by local (a ref field already set
 // in rec) at its drawn id, and returns its target field — so a field can equal a
 // referenced row's value (auth.uname == users.email). Coherent by construction:
 // positional determinism means the re-derived row is identical to the stored one.
-func (p *Plan) projectField(e *Entity, rec *Record, local, target string, seed uint64, depth int) any {
-	id, ok := rec.Get(local).(int)
+func (p *Plan) projectField(e *Entity, refIdx map[string]int, local, target string, seed uint64, depth int) any {
+	idx, ok := refIdx[local] // the drawn row index, not the emitted id
 	if !ok {
 		return nil
 	}
 	te := ""
 	for _, lf := range e.Fields {
 		if lf.Name == local && lf.Ref != "" {
-			te = lf.Ref
-			if k := strings.IndexByte(te, '.'); k >= 0 {
-				te = te[:k]
-			}
+			te = refTarget(lf.Ref)
 			break
 		}
 	}
@@ -180,8 +215,7 @@ func (p *Plan) projectField(e *Entity, rec *Record, local, target string, seed u
 	if ent == nil {
 		return nil
 	}
-	tr := p.genRecord(ent, RowSource(seed, te, id), id, p.Counts[te], seed,
-		p.refResolver(seed, te, id), depth+1)
+	tr := p.genRecord(ent, RowSource(seed, te, idx), idx, p.Counts[te], seed, depth+1)
 	return tr.Get(target)
 }
 

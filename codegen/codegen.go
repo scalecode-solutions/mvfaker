@@ -47,6 +47,9 @@ func _copyEsc(s string) string {
 
 	for _, name := range p.Order {
 		e := p.Entities[name]
+		if e.IDType == "uuid" {
+			return fmt.Errorf("codegen does not yet support uuid ids (entity %q); use the interpreter (--seed)", name)
+		}
 		emitStruct(&b, e)
 		emitBuilders(&b, e)
 		emitGen(&b, p, e)
