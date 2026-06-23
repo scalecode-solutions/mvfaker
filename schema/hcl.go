@@ -20,9 +20,10 @@ type configFile struct {
 }
 
 type entityBlock struct {
-	Name   string       `hcl:"name,label"`
-	IDType string       `hcl:"id_type,optional"` // "int" (default) or "uuid"
-	Fields []fieldBlock `hcl:"field,block"`
+	Name         string       `hcl:"name,label"`
+	IDType       string       `hcl:"id_type,optional"`       // "int" (default), "uuid", or "none"
+	DistinctPair []string     `hcl:"distinct_pair,optional"` // two ref fields forming a unique pair
+	Fields       []fieldBlock `hcl:"field,block"`
 }
 
 type fieldBlock struct {
@@ -49,7 +50,7 @@ func LoadHCL(path string) (*Plan, error) {
 
 	p := &Plan{Entities: map[string]*Entity{}, Counts: map[string]int{}}
 	for _, eb := range cfg.Entities {
-		e := &Entity{Name: eb.Name, IDType: eb.IDType}
+		e := &Entity{Name: eb.Name, IDType: eb.IDType, DistinctPair: eb.DistinctPair}
 		for _, fb := range eb.Fields {
 			f, err := decodeField(fb)
 			if err != nil {

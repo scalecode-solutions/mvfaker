@@ -27,10 +27,11 @@ type FieldSpec struct {
 
 // EntitySpec is one entity (table/collection) in a JSON dataset spec.
 type EntitySpec struct {
-	Name   string      `json:"name"`
-	IDType string      `json:"id_type,omitempty"` // "int" (default) or "uuid"
-	Count  int         `json:"count"`
-	Fields []FieldSpec `json:"fields"`
+	Name         string      `json:"name"`
+	IDType       string      `json:"id_type,omitempty"`       // "int" (default), "uuid", or "none"
+	DistinctPair []string    `json:"distinct_pair,omitempty"` // two ref fields forming a unique pair
+	Count        int         `json:"count"`
+	Fields       []FieldSpec `json:"fields"`
 }
 
 // Spec is a full JSON dataset description.
@@ -48,7 +49,7 @@ func (s Spec) Plan() (*Plan, error) {
 		if es.Name == "" {
 			return nil, fmt.Errorf("entity missing name")
 		}
-		e := &Entity{Name: es.Name, IDType: es.IDType}
+		e := &Entity{Name: es.Name, IDType: es.IDType, DistinctPair: es.DistinctPair}
 		for _, fs := range es.Fields {
 			f := &Field{
 				Name: fs.Name, Gen: fs.Gen, From: fs.From, Ref: fs.Ref, Unique: fs.Unique,

@@ -222,9 +222,15 @@ Combine `copy` + `transform` for derived columns, e.g. `handle_lower =
 lower(handle)`.
 
 **Primary key type** — an entity is int-keyed by default (id = row index); set
-`id_type = "uuid"` for a deterministic v4 UUID id. Int- and UUID-keyed entities
-can coexist, and a `ref` to a table is automatically encoded as *that table's* id
-type (an FK to a UUID table emits the matching UUID).
+`id_type = "uuid"` for a deterministic v4 UUID id, or `id_type = "none"` to emit
+no `id` column (composite-PK tables). Int- and UUID-keyed entities can coexist,
+and a `ref` to a table is automatically encoded as *that table's* id type.
+
+**Unique & composite refs** — `ref ... unique = true` gives a distinct target per
+row (1:1, e.g. `auth` ↔ `users`). For a join table, declare the two ref fields as
+a unique pair on the entity: `distinct_pair = ["conversation_id", "user_id"]` —
+pairs never collide, and if both reference the same table the diagonal is
+excluded (no self-edges).
 
 **Cross-entity coherence** — a field can equal a *referenced* row's value:
 `from = "user_id.email"` re-derives the row that the `user_id` FK points at and

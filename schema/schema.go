@@ -35,8 +35,12 @@ type Field struct {
 // Entity is a named record shape.
 type Entity struct {
 	Name   string
-	IDType string // "int" (default, the row index) or "uuid" (deterministic per row)
-	Fields []*Field
+	IDType string // "int" (default, the row index), "uuid", or "none" (composite PK, no id column)
+	// DistinctPair names two ref fields that jointly form a unique key; their
+	// indices are derived from one permuted pair-index so pairs never collide.
+	// If both reference the same entity, the diagonal is excluded (no self-edges).
+	DistinctPair []string
+	Fields       []*Field
 }
 
 // Plan is the full dataset description: shapes plus how many of each.
@@ -112,15 +116,26 @@ const maxProjDepth = 8
 // tracks cross-entity projection recursion.
 func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, depth int) *Record {
 	rec := newRecord()
-	rec.Set("id", encodeID(e.IDType, seed, e.Name, id)) // int index or deterministic UUID
+	if e.IDType != "none" { // "none" → composite PK, emit no id column (#15)
+		rec.Set("id", encodeID(e.IDType, seed, e.Name, id))
+	}
 	if depth > maxProjDepth {
 		return rec
 	}
-	refIdx := map[string]int{} // ref field -> drawn target row index (for projection)
+	pair := p.distinctPairIdx(e, id, seed) // #17 jointly-unique ref indices
+	refIdx := map[string]int{}             // ref field -> drawn target row index (for projection)
 	for _, f := range e.Fields {
 		if f.Ref != "" {
 			target := refTarget(f.Ref)
-			idx := RefIndex(seed, e.Name, id, f.Ref, p.Counts[target])
+			tc := p.Counts[target]
+			var idx int
+			if pi, ok := pair[f.Name]; ok { // part of a distinct pair (#17)
+				idx = pi
+			} else if f.Unique { // distinct 1:1 ref (#16) — requires count <= target count
+				idx = permuteIndex(id, tc, hashStr(e.Name+"."+f.Name)^seed)
+			} else {
+				idx = RefIndex(seed, e.Name, id, f.Ref, tc)
+			}
 			refIdx[f.Name] = idx
 			it := "int"
 			if te := p.Entities[target]; te != nil {
@@ -171,6 +186,46 @@ func refTarget(ref string) string {
 		return ref[:k]
 	}
 	return ref
+}
+
+func (p *Plan) fieldRefTarget(e *Entity, name string) string {
+	for _, f := range e.Fields {
+		if f.Name == name && f.Ref != "" {
+			return refTarget(f.Ref)
+		}
+	}
+	return ""
+}
+
+// distinctPairIdx derives the two ref indices for a distinct_pair entity at row
+// id: a permutation of the pair-index space, so pairs are unique by construction.
+// Same-target pairs exclude the diagonal (no self-edges). Distinctness holds when
+// the entity's row count <= the pair-space size.
+func (p *Plan) distinctPairIdx(e *Entity, id int, seed uint64) map[string]int {
+	if len(e.DistinctPair) != 2 {
+		return nil
+	}
+	fa, fb := e.DistinctPair[0], e.DistinctPair[1]
+	ta, tb := p.fieldRefTarget(e, fa), p.fieldRefTarget(e, fb)
+	ca, cb := p.Counts[ta], p.Counts[tb]
+	if ca <= 0 || cb <= 0 {
+		return nil
+	}
+	key := hashStr(e.Name+".pair") ^ seed ^ 0x5151
+	if ta == tb { // same target: exclude self-edges, space = U*(U-1)
+		u := ca
+		if u < 2 {
+			return map[string]int{fa: 0, fb: 0}
+		}
+		pi := permuteIndex(id, u*(u-1), key)
+		a, b := pi/(u-1), pi%(u-1)
+		if b >= a {
+			b++ // skip the diagonal a==b
+		}
+		return map[string]int{fa: a, fb: b}
+	}
+	pi := permuteIndex(id, ca*cb, key) // distinct (convIdx, userIdx) pairs
+	return map[string]int{fa: pi / cb, fb: pi % cb}
 }
 
 // encodeID renders a row index as its emitted primary key: the int index itself,
