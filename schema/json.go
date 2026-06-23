@@ -13,12 +13,15 @@ import (
 
 // FieldSpec is one field in a JSON dataset spec.
 type FieldSpec struct {
-	Name   string         `json:"name"`
-	Gen    string         `json:"gen,omitempty"`    // generator name (omit for ref)
-	From   string         `json:"from,omitempty"`   // coherence: derive from this field
-	Ref    string         `json:"ref,omitempty"`    // FK: "entity.id"
-	Unique bool           `json:"unique,omitempty"` // runner-enforced uniqueness
-	Params map[string]any `json:"params,omitempty"` // generator params (min, max, n, locale…)
+	Name      string         `json:"name"`
+	Gen       string         `json:"gen,omitempty"`       // generator name (omit for ref)
+	From      string         `json:"from,omitempty"`      // coherence: derive from this field
+	Ref       string         `json:"ref,omitempty"`       // FK: "entity.id"
+	Unique    bool           `json:"unique,omitempty"`    // runner-enforced uniqueness
+	Transform string         `json:"transform,omitempty"` // lower|upper|slug|title
+	MaxLen    int            `json:"maxlen,omitempty"`    // truncate strings to length
+	NullProb  float64        `json:"null_prob,omitempty"` // probability the value is NULL
+	Params    map[string]any `json:"params,omitempty"`    // generator params (min, max, n, locale…)
 }
 
 // EntitySpec is one entity (table/collection) in a JSON dataset spec.
@@ -45,7 +48,10 @@ func (s Spec) Plan() (*Plan, error) {
 		}
 		e := &Entity{Name: es.Name}
 		for _, fs := range es.Fields {
-			f := &Field{Name: fs.Name, Gen: fs.Gen, From: fs.From, Ref: fs.Ref, Unique: fs.Unique, Params: data.Params{}}
+			f := &Field{
+				Name: fs.Name, Gen: fs.Gen, From: fs.From, Ref: fs.Ref, Unique: fs.Unique,
+				Transform: fs.Transform, MaxLen: fs.MaxLen, NullProb: fs.NullProb, Params: data.Params{},
+			}
 			for k, v := range fs.Params {
 				f.Params[k] = v
 			}

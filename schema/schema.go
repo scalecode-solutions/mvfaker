@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/scalecode-solutions/mvfaker/data"
 	"github.com/scalecode-solutions/mvfaker/gen"
@@ -20,6 +21,12 @@ type Field struct {
 	Ref    string      // FK: "entity.id"
 	Unique bool        // dataset-layer uniqueness (runner-enforced)
 	Params data.Params // declarative attrs
+
+	// Field-level modifiers, applied (in order) after the generator produces a
+	// value: transform → maxlen → unique → null. They work with any generator.
+	Transform string  // lower | upper | slug | title (string values)
+	MaxLen    int     // truncate string values to this length (0 = no limit)
+	NullProb  float64 // probability in [0,1] the value is NULL instead
 
 	make data.MakeFn // resolved from the registry
 }
@@ -109,12 +116,65 @@ func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, re
 			dep = rec.Get(f.From)
 		}
 		val := f.make(dep).Generate(s.Split())
+		if f.Transform != "" {
+			val = applyTransform(f.Transform, val)
+		}
+		if f.MaxLen > 0 {
+			val = truncate(val, f.MaxLen)
+		}
 		if f.Unique {
 			val = UniqueValue(val, id, count, seed, e.Name, f.Name)
+		}
+		if f.NullProb > 0 && drawNull(s.Split(), f.NullProb) {
+			val = nil
 		}
 		rec.Set(f.Name, val)
 	}
 	return rec
+}
+
+func applyTransform(t string, v any) any {
+	s, ok := v.(string)
+	if !ok {
+		return v
+	}
+	switch t {
+	case "lower":
+		return strings.ToLower(s)
+	case "upper":
+		return strings.ToUpper(s)
+	case "title":
+		return strings.Title(s)
+	case "slug":
+		return slugify(s)
+	}
+	return v
+}
+
+func truncate(v any, n int) any {
+	if s, ok := v.(string); ok && len(s) > n {
+		return s[:n]
+	}
+	return v
+}
+
+func drawNull(s gen.Source, p float64) bool {
+	const scale = 1_000_000
+	return s.Draw(scale) < uint64(p*scale)
+}
+
+func slugify(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'):
+			b.WriteRune(r)
+		case r == ' ' || r == '-' || r == '_':
+			b.WriteByte('-')
+		}
+	}
+	return b.String()
 }
 
 func hashStr(s string) uint64 {

@@ -208,8 +208,16 @@ Payments — `creditcard` (Luhn-valid), `creditcard.number`, `creditcard.type`,
 Coherent: `number` and `cvv` with `from = "type"` match the scheme (Amex → 15
 digits + 4-digit CVV; Visa/MC/Discover → 16 + 3). Fake test numbers, never real.
 
-Also: `internet.email`, `date`, `datetime`, `money`/`price`, `number`, `bool`,
-`uuid`, `lorem.word(s)`.
+Also: `internet.email`, `date`, `datetime`, `timestamp` (now-anchored, day
+granularity), `money`/`price`, `number`, `bool`, `uuid`, `lorem.word(s)`,
+`json` (jsonb columns), `password.bcrypt` (login-capable seed users),
+`oneof` (`values=[…]` + optional `weights=[…]` — define your own categorical
+data), and `copy` (echo a `from` field).
+
+**Field modifiers** apply to any field after generation: `transform` (`lower`/
+`upper`/`slug`/`title`), `maxlen` (truncate to a `varchar(n)`), and `null_prob`
+(emit `NULL` with a probability). Combine `copy` + `transform` for derived
+columns, e.g. `handle_lower = lower(handle)`.
 
 Everything coheres via `from`: set a `country` field, then `from = "country"` on
 `country.code` / `currency` / `city` / `phone` and they all match. (Reserved

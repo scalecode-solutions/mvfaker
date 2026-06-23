@@ -91,6 +91,19 @@ func decodeField(fb fieldBlock) (*Field, error) {
 			f.Ref, _ = gv.(string)
 		case "unique":
 			f.Unique, _ = gv.(bool)
+		case "transform":
+			f.Transform, _ = gv.(string)
+		case "maxlen":
+			if i, ok := gv.(int); ok {
+				f.MaxLen = i
+			}
+		case "null_prob":
+			switch x := gv.(type) {
+			case float64:
+				f.NullProb = x
+			case int:
+				f.NullProb = float64(x)
+			}
 		default:
 			f.Params[name] = gv
 		}
@@ -102,7 +115,15 @@ func ctyToGo(v cty.Value) any {
 	if v.IsNull() {
 		return nil
 	}
-	switch v.Type() {
+	t := v.Type()
+	if t.IsTupleType() || t.IsListType() || t.IsSetType() {
+		var out []any
+		for _, el := range v.AsValueSlice() {
+			out = append(out, ctyToGo(el))
+		}
+		return out
+	}
+	switch t {
 	case cty.String:
 		return v.AsString()
 	case cty.Bool:
