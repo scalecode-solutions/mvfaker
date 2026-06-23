@@ -148,9 +148,24 @@ func (p *Plan) CheckSchema(tables map[string][]Column) []Issue {
 			}
 		}
 
-		check("id", "numeric")
+		// The emitted id column depends on id_type: "none" emits none, "uuid" is
+		// text, otherwise the int index.
+		switch e.IDType {
+		case "none":
+			// composite PK — no id column emitted
+		case "uuid":
+			check("id", "text")
+		default:
+			check("id", "numeric")
+		}
 		for _, f := range e.Fields {
-			check(f.Name, genCategory(f))
+			cat := genCategory(f)
+			if f.Ref != "" { // a FK is emitted as its target's id type
+				if te := p.Entities[refTarget(f.Ref)]; te != nil && te.IDType == "uuid" {
+					cat = "text"
+				}
+			}
+			check(f.Name, cat)
 		}
 
 		// info: table columns the config doesn't populate
