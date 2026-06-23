@@ -47,10 +47,13 @@ func _copyEsc(s string) string {
 
 	for _, name := range p.Order {
 		e := p.Entities[name]
-		if e.IDType == "uuid" {
-			return fmt.Errorf("codegen does not yet support uuid ids (entity %q); use the interpreter (--seed)", name)
+		for _, f := range e.Fields {
+			if f.Transform != "" || f.MaxLen > 0 || f.NullProb > 0 || f.When != "" {
+				return fmt.Errorf("codegen does not yet support field modifiers "+
+					"(transform/maxlen/null_prob/when); %s.%s uses one — use the interpreter (--seed)", name, f.Name)
+			}
 		}
-		emitStruct(&b, e)
+		emitStruct(&b, p, e)
 		emitBuilders(&b, e)
 		emitGen(&b, p, e)
 		emitSeed(&b, p, e)
@@ -65,10 +68,10 @@ func _copyEsc(s string) string {
 	return err
 }
 
-func emitStruct(b *bytes.Buffer, e *schema.Entity) {
-	fmt.Fprintf(b, "type %s struct {\n\tID int\n", exportName(e.Name))
+func emitStruct(b *bytes.Buffer, p *schema.Plan, e *schema.Entity) {
+	fmt.Fprintf(b, "type %s struct {\n\tID %s\n", exportName(e.Name), idGoType(e))
 	for _, f := range e.Fields {
-		fmt.Fprintf(b, "\t%s %s\n", exportName(f.Name), goType(f))
+		fmt.Fprintf(b, "\t%s %s\n", exportName(f.Name), fieldGoType(p, f))
 	}
 	b.WriteString("}\n\n")
 }
@@ -92,27 +95,44 @@ func emitBuilders(b *bytes.Buffer, e *schema.Entity) {
 
 func emitGen(b *bytes.Buffer, p *schema.Plan, e *schema.Entity) {
 	fmt.Fprintf(b, "func Gen%s(seed uint64, id, count int) %s {\n", exportName(e.Name), exportName(e.Name))
-	fmt.Fprintf(b, "\tsrc := schema.RowSource(seed, %q, id)\n\tvar r %s\n\tr.ID = id\n", e.Name, exportName(e.Name))
+	fmt.Fprintf(b, "\tsrc := schema.RowSource(seed, %q, id)\n\tvar r %s\n", e.Name, exportName(e.Name))
+	if e.IDType == "uuid" {
+		fmt.Fprintf(b, "\tr.ID = schema.UUIDFor(seed, %q, id)\n", e.Name)
+	} else {
+		b.WriteString("\tr.ID = id\n")
+	}
+	refIdxVar := map[string]string{} // ref field -> local index var name
+	refTgt := map[string]string{}    // ref field -> target entity
 	for _, f := range e.Fields {
 		if f.Ref != "" {
-			target := f.Ref
-			if k := strings.IndexByte(f.Ref, '.'); k >= 0 {
-				target = f.Ref[:k]
+			target := refTargetName(f.Ref)
+			iv := "ix_" + ident(f.Name)
+			fmt.Fprintf(b, "\t%s := schema.RefIndex(seed, %q, id, %q, %d)\n", iv, e.Name, f.Ref, p.Counts[target])
+			refIdxVar[f.Name], refTgt[f.Name] = iv, target
+			if te := p.Entities[target]; te != nil && te.IDType == "uuid" {
+				fmt.Fprintf(b, "\tr.%s = schema.UUIDFor(seed, %q, %s)\n", exportName(f.Name), target, iv)
+			} else {
+				fmt.Fprintf(b, "\tr.%s = %s\n", exportName(f.Name), iv)
 			}
-			fmt.Fprintf(b, "\tr.%s = schema.RefIndex(seed, %q, id, %q, %d)\n",
-				exportName(f.Name), e.Name, f.Ref, p.Counts[target])
 			continue
 		}
 		dep := "nil"
 		if f.From != "" {
-			dep = "any(r." + exportName(f.From) + ")"
+			if i := strings.IndexByte(f.From, '.'); i >= 0 { // cross-entity projection
+				local, tf := f.From[:i], f.From[i+1:]
+				if te, iv := refTgt[local], refIdxVar[local]; te != "" && iv != "" {
+					dep = fmt.Sprintf("any(Gen%s(seed, %s, %d).%s)", exportName(te), iv, p.Counts[te], exportName(tf))
+				}
+			} else {
+				dep = "any(r." + exportName(f.From) + ")"
+			}
 		}
 		b.WriteString("\t{\n")
 		fmt.Fprintf(b, "\t\tv := %s(%s).Generate(src.Split())\n", varName(e.Name, f.Name), dep)
 		if f.Unique {
 			fmt.Fprintf(b, "\t\tv = schema.UniqueValue(v, id, count, seed, %q, %q)\n", e.Name, f.Name)
 		}
-		fmt.Fprintf(b, "\t\tr.%s = v.(%s)\n\t}\n", exportName(f.Name), goType(f))
+		fmt.Fprintf(b, "\t\tr.%s = v.(%s)\n\t}\n", exportName(f.Name), fieldGoType(p, f))
 	}
 	b.WriteString("\treturn r\n}\n\n")
 }
@@ -128,10 +148,10 @@ func emitSeed(b *bytes.Buffer, p *schema.Plan, e *schema.Entity) {
 		fmt.Sprintf("COPY %s (%s) FROM stdin;\n", e.Name, strings.Join(cols, ", ")))
 	b.WriteString("\tfor i := 0; i < n; i++ {\n")
 	fmt.Fprintf(b, "\t\tr := Gen%s(seed, i, n)\n", exportName(e.Name))
-	b.WriteString("\t\tbw.WriteString(strconv.Itoa(r.ID))\n")
+	emitFieldWrite(b, "r.ID", idGoType(e))
 	for _, f := range e.Fields {
 		b.WriteString("\t\tbw.WriteByte('\\t')\n")
-		emitFieldWrite(b, "r."+exportName(f.Name), goType(f))
+		emitFieldWrite(b, "r."+exportName(f.Name), fieldGoType(p, f))
 	}
 	b.WriteString("\t\tbw.WriteByte('\\n')\n\t}\n")
 	b.WriteString("\tif _, err := io.WriteString(bw, \"\\\\.\\n\"); err != nil {\n\t\treturn err\n\t}\n\treturn bw.Flush()\n}\n\n")
@@ -159,8 +179,27 @@ func emitSeedAll(b *bytes.Buffer, p *schema.Plan) {
 
 // --- helpers ---------------------------------------------------------------
 
-func goType(f *schema.Field) string {
+func refTargetName(ref string) string {
+	if k := strings.IndexByte(ref, '.'); k >= 0 {
+		return ref[:k]
+	}
+	return ref
+}
+
+// idGoType is the Go type of an entity's primary key: string for uuid, else int.
+func idGoType(e *schema.Entity) string {
+	if e.IDType == "uuid" {
+		return "string"
+	}
+	return "int"
+}
+
+// fieldGoType is the Go type of a field. A ref takes its *target's* id type.
+func fieldGoType(p *schema.Plan, f *schema.Field) string {
 	if f.Ref != "" {
+		if te := p.Entities[refTargetName(f.Ref)]; te != nil {
+			return idGoType(te)
+		}
 		return "int"
 	}
 	switch f.Gen {

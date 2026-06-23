@@ -182,6 +182,12 @@ func encodeID(idType string, seed uint64, entity string, index int) any {
 	return index
 }
 
+// UUIDFor returns the deterministic UUID for a row index — exported so generated
+// code (codegen) emits the same id the interpreter does.
+func UUIDFor(seed uint64, entity string, index int) string {
+	return deterministicUUID(seed, entity, index)
+}
+
 // deterministicUUID derives a stable RFC 4122 v4 UUID from (seed, entity, index),
 // so an entity's id and any FK to it agree, and re-runs are reproducible.
 func deterministicUUID(seed uint64, entity string, index int) string {
