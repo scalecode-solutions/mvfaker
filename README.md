@@ -215,9 +215,17 @@ granularity), `money`/`price`, `number`, `bool`, `uuid`, `lorem.word(s)`,
 data), and `copy` (echo a `from` field).
 
 **Field modifiers** apply to any field after generation: `transform` (`lower`/
-`upper`/`slug`/`title`), `maxlen` (truncate to a `varchar(n)`), and `null_prob`
-(emit `NULL` with a probability). Combine `copy` + `transform` for derived
-columns, e.g. `handle_lower = lower(handle)`.
+`upper`/`slug`/`title`), `maxlen` (truncate to a `varchar(n)`), `null_prob`
+(emit `NULL` with a probability), and `when` (NULL unless a condition on a
+sibling holds — `when = "state == deactivated"`, supports `==`/`!=`/`in [..]`).
+Combine `copy` + `transform` for derived columns, e.g. `handle_lower =
+lower(handle)`.
+
+**Cross-entity coherence** — a field can equal a *referenced* row's value:
+`from = "user_id.email"` re-derives the row that the `user_id` FK points at and
+projects its `email` (so `auth.uname == users.email`, exact, no join). Coherent
+by construction — positional determinism means the re-derived row is the stored
+one, uniqueness suffix and all.
 
 Everything coheres via `from`: set a `country` field, then `from = "country"` on
 `country.code` / `currency` / `city` / `phone` and they all match. (Reserved

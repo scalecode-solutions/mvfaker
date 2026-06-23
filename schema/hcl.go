@@ -104,6 +104,8 @@ func decodeField(fb fieldBlock) (*Field, error) {
 			case int:
 				f.NullProb = float64(x)
 			}
+		case "when":
+			f.When, _ = gv.(string)
 		default:
 			f.Params[name] = gv
 		}

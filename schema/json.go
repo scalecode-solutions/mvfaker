@@ -21,6 +21,7 @@ type FieldSpec struct {
 	Transform string         `json:"transform,omitempty"` // lower|upper|slug|title
 	MaxLen    int            `json:"maxlen,omitempty"`    // truncate strings to length
 	NullProb  float64        `json:"null_prob,omitempty"` // probability the value is NULL
+	When      string         `json:"when,omitempty"`      // NULL unless condition holds, e.g. "state == deactivated"
 	Params    map[string]any `json:"params,omitempty"`    // generator params (min, max, n, locale…)
 }
 
@@ -50,7 +51,8 @@ func (s Spec) Plan() (*Plan, error) {
 		for _, fs := range es.Fields {
 			f := &Field{
 				Name: fs.Name, Gen: fs.Gen, From: fs.From, Ref: fs.Ref, Unique: fs.Unique,
-				Transform: fs.Transform, MaxLen: fs.MaxLen, NullProb: fs.NullProb, Params: data.Params{},
+				Transform: fs.Transform, MaxLen: fs.MaxLen, NullProb: fs.NullProb, When: fs.When,
+				Params: data.Params{},
 			}
 			for k, v := range fs.Params {
 				f.Params[k] = v

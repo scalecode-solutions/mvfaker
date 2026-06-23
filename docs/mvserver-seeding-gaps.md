@@ -12,12 +12,16 @@ variants — instead of a hand-seeded blob or ad-hoc fleet.
 This was produced from a read-only walk of the mvFaker source (`data/`,
 `schema/`, `cmd/mvfaker/`). Effort sizes are rough.
 
-> **Status (updated):** the "minimum to seed lifecycle-testable users from pure
-> HCL" cut is **shipped** — #1 `oneof`, #2 `timestamp`, #3 `json`, #4
-> `password.bcrypt`, #5 `transform` (via `copy` + the `transform` modifier), #6
-> `maxlen`, #9 `null_prob`. Field modifiers (`transform`/`maxlen`/`null_prob`)
-> work on any field. **Remaining:** #7 cross-entity projection, #8 conditional
-> coherence, #10–#12 `--check` gaps, #13 plugin seam, #14 direct PG load.
+> **Status (updated):** value/coherence gaps are **shipped** — #1 `oneof`, #2
+> `timestamp`, #3 `json`, #4 `password.bcrypt`, #5 `transform` (`copy` + the
+> `transform` modifier), #6 `maxlen`, #7 **cross-entity projection**
+> (`from = "user_id.email"`), #8 **conditional coherence** (`when = "state ==
+> deactivated"`), #9 `null_prob`. So login-capable users with `auth.uname =
+> user.email` and strict lifecycle anchors are now pure-HCL.
+> **Remaining:** #10–#12 `--check` gaps (NOT NULL / varchar-length / migrated
+> schema), #13 plugin seam, #14 direct PG load. #8's `last_seen`-band-by-state
+> (conditional *value*, not just presence) still wants either per-state `when`
+> fields or the SQL post-pass.
 
 ---
 

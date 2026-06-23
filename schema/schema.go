@@ -23,10 +23,11 @@ type Field struct {
 	Params data.Params // declarative attrs
 
 	// Field-level modifiers, applied (in order) after the generator produces a
-	// value: transform → maxlen → unique → null. They work with any generator.
+	// value: transform → maxlen → unique → when → null. They work with any generator.
 	Transform string  // lower | upper | slug | title (string values)
 	MaxLen    int     // truncate string values to this length (0 = no limit)
 	NullProb  float64 // probability in [0,1] the value is NULL instead
+	When      string  // condition on a sibling: "state == deactivated"; NULL unless it holds
 
 	make data.MakeFn // resolved from the registry
 }
@@ -101,11 +102,19 @@ func (r *Record) MarshalJSON() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// maxProjDepth bounds cross-entity projection so a mutual projection (A↔B) can't
+// recurse forever.
+const maxProjDepth = 8
+
 // genRecord builds one record. id is the row index; count is the entity's total
-// row count (the uniqueness domain). refFn resolves an "entity.id" FK.
-func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, refFn func(ref string) any) *Record {
+// row count (the uniqueness domain). refFn resolves an "entity.id" FK. depth
+// tracks cross-entity projection recursion.
+func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, refFn func(ref string) any, depth int) *Record {
 	rec := newRecord()
 	rec.Set("id", id)
+	if depth > maxProjDepth {
+		return rec
+	}
 	for _, f := range e.Fields {
 		if f.Ref != "" {
 			rec.Set(f.Name, refFn(f.Ref))
@@ -113,7 +122,11 @@ func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, re
 		}
 		var dep any
 		if f.From != "" {
-			dep = rec.Get(f.From)
+			if local, target, ok := splitProjection(f.From); ok {
+				dep = p.projectField(e, rec, local, target, seed, depth) // #7 cross-entity
+			} else {
+				dep = rec.Get(f.From) // within-entity coherence
+			}
 		}
 		val := f.make(dep).Generate(s.Split())
 		if f.Transform != "" {
@@ -125,12 +138,80 @@ func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, re
 		if f.Unique {
 			val = UniqueValue(val, id, count, seed, e.Name, f.Name)
 		}
+		if f.When != "" && !evalWhen(f.When, rec) { // #8 conditional coherence
+			val = nil
+		}
 		if f.NullProb > 0 && drawNull(s.Split(), f.NullProb) {
 			val = nil
 		}
 		rec.Set(f.Name, val)
 	}
 	return rec
+}
+
+// splitProjection detects a cross-entity from of the form "ref_field.target".
+func splitProjection(from string) (local, target string, ok bool) {
+	if i := strings.IndexByte(from, '.'); i >= 0 {
+		return from[:i], from[i+1:], true
+	}
+	return "", "", false
+}
+
+// projectField re-derives the row referenced by local (a ref field already set
+// in rec) at its drawn id, and returns its target field — so a field can equal a
+// referenced row's value (auth.uname == users.email). Coherent by construction:
+// positional determinism means the re-derived row is identical to the stored one.
+func (p *Plan) projectField(e *Entity, rec *Record, local, target string, seed uint64, depth int) any {
+	id, ok := rec.Get(local).(int)
+	if !ok {
+		return nil
+	}
+	te := ""
+	for _, lf := range e.Fields {
+		if lf.Name == local && lf.Ref != "" {
+			te = lf.Ref
+			if k := strings.IndexByte(te, '.'); k >= 0 {
+				te = te[:k]
+			}
+			break
+		}
+	}
+	ent := p.Entities[te]
+	if ent == nil {
+		return nil
+	}
+	tr := p.genRecord(ent, RowSource(seed, te, id), id, p.Counts[te], seed,
+		p.refResolver(seed, te, id), depth+1)
+	return tr.Get(target)
+}
+
+// evalWhen reports whether a "field op value" condition holds against rec.
+// Supports ==, !=, and "in [a, b, …]".
+func evalWhen(cond string, rec *Record) bool {
+	cond = strings.TrimSpace(cond)
+	if i := strings.Index(cond, " in "); i >= 0 {
+		field := strings.TrimSpace(cond[:i])
+		list := strings.Trim(strings.TrimSpace(cond[i+4:]), "[]")
+		actual := fmt.Sprint(rec.Get(field))
+		for _, v := range strings.Split(list, ",") {
+			if strings.TrimSpace(v) == actual {
+				return true
+			}
+		}
+		return false
+	}
+	for _, op := range []string{"!=", "=="} {
+		if i := strings.Index(cond, op); i >= 0 {
+			field := strings.TrimSpace(cond[:i])
+			val := strings.TrimSpace(cond[i+len(op):])
+			eq := fmt.Sprint(rec.Get(field)) == val
+			if op == "==" {
+				return eq
+			}
+			return !eq
+		}
+	}
+	return true // unparseable condition → don't gate
 }
 
 func applyTransform(t string, v any) any {

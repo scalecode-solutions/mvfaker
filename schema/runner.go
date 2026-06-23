@@ -44,7 +44,7 @@ func (p *Plan) Generate(entity string, seed uint64, n int) ([]*Record, error) {
 	out := make([]*Record, n)
 	for i := 0; i < n; i++ {
 		src := RowSource(seed, entity, i)
-		out[i] = p.genRecord(e, src, i, n, seed, p.refResolver(seed, entity, i))
+		out[i] = p.genRecord(e, src, i, n, seed, p.refResolver(seed, entity, i), 0)
 	}
 	return out, nil
 }
@@ -56,7 +56,7 @@ func (p *Plan) One(entity string, seed uint64, id, count int) (*Record, error) {
 		return nil, fmt.Errorf("unknown entity %q", entity)
 	}
 	src := RowSource(seed, entity, id)
-	return p.genRecord(e, src, id, count, seed, p.refResolver(seed, entity, id)), nil
+	return p.genRecord(e, src, id, count, seed, p.refResolver(seed, entity, id), 0), nil
 }
 
 // Seed streams every entity's dataset to the sink. Used by --seed.
@@ -72,7 +72,7 @@ func (p *Plan) Seed(seed uint64, sink Sink) error {
 		}
 		for i := 0; i < n; i++ {
 			src := RowSource(seed, name, i)
-			rec := p.genRecord(e, src, i, n, seed, p.refResolver(seed, name, i))
+			rec := p.genRecord(e, src, i, n, seed, p.refResolver(seed, name, i), 0)
 			if err := sink.Write(rec); err != nil {
 				return err
 			}
