@@ -241,7 +241,14 @@ excluded (no self-edges).
 `from = "user_id.email"` re-derives the row that the `user_id` FK points at and
 projects its `email` (so `auth.uname == users.email`, exact, no join). Coherent
 by construction — positional determinism means the re-derived row is the stored
-one, uniqueness suffix and all.
+one, uniqueness suffix and all. A `ref` to a composite-PK (`id_type = "none"`)
+entity is a *projection source only* (not emitted), so a message can `copy` both
+`conversation_id` and `from_user_id` from one `members` row — making the sender a
+member of the conversation by construction.
+
+**Per-parent sequence** — `gen = "sequence"` with `within = "conversation_id"`
+emits a dense `1..N` ordinal within each parent group (satisfying
+`UNIQUE(conversation_id, seq)`), for realistic ordering / read-state.
 
 Everything coheres via `from`: set a `country` field, then `from = "country"` on
 `country.code` / `currency` / `city` / `phone` and they all match. (Reserved

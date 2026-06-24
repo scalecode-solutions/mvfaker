@@ -51,6 +51,14 @@ func _copyEsc(s string) string {
 			return fmt.Errorf("codegen does not yet support id_type=none / distinct_pair (entity %q); use the interpreter (--seed)", name)
 		}
 		for _, f := range e.Fields {
+			if f.Gen == "sequence" {
+				return fmt.Errorf("codegen does not support sequence fields (%s.%s); use the interpreter (--seed)", name, f.Name)
+			}
+			if f.Ref != "" {
+				if te := p.Entities[refTargetName(f.Ref)]; te != nil && te.IDType == "none" {
+					return fmt.Errorf("codegen does not support refs to composite-PK entities (%s.%s); use the interpreter (--seed)", name, f.Name)
+				}
+			}
 			if f.Ref != "" && f.Unique {
 				return fmt.Errorf("codegen does not yet support unique refs (%s.%s); use the interpreter (--seed)", name, f.Name)
 			}

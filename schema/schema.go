@@ -57,7 +57,7 @@ func (p *Plan) Resolve() error {
 	for _, name := range p.Order {
 		e := p.Entities[name]
 		for _, f := range e.Fields {
-			if f.Ref != "" {
+			if f.Ref != "" || f.Gen == "sequence" { // sequence is filled by the runner, not a builder
 				continue
 			}
 			mk, err := data.Build(f.Gen, f.Params)
@@ -138,11 +138,19 @@ func (p *Plan) genRecord(e *Entity, s gen.Source, id, count int, seed uint64, de
 				idx = RefIndex(seed, e.Name, id, f.Ref, tc)
 			}
 			refIdx[f.Name] = idx
+			te := p.Entities[target]
+			if te != nil && te.IDType == "none" {
+				continue // ref to a composite-PK entity (#19): a projection source only, not a column
+			}
 			it := "int"
-			if te := p.Entities[target]; te != nil {
+			if te != nil {
 				it = te.IDType
 			}
 			rec.Set(f.Name, encodeID(it, seed, target, idx)) // FK encoded as target's id type
+			continue
+		}
+		if f.Gen == "sequence" { // #20 — filled by the runner's per-parent counter pass
+			rec.Set(f.Name, 0)
 			continue
 		}
 		var dep any
